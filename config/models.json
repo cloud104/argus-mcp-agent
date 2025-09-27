@@ -1,0 +1,22 @@
+{
+  "planner_model": {
+    "provider": "openai",
+    "class_path": "langchain_openai.ChatOpenAI",
+    "model_name": "gpt-4o-mini"
+  },
+  "synthesizer_model": {
+    "provider": "openai",
+    "class_path": "langchain_openai.ChatOpenAI",
+    "model_name": "gpt-4o"
+  },
+  "gemini-pro": {
+    "provider": "google",
+    "class_path": "langchain_google_genai.ChatGoogleGenerativeAI",
+    "model_name": "gemini-1.5-pro-latest"
+  },
+  "claude-haiku": {
+    "provider": "anthropic",
+    "class_path": "langchain_anthropic.ChatAnthropic",
+    "model_name": "claude-3-haiku-20240307"
+  }
+}
