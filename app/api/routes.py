@@ -61,6 +61,7 @@ async def deep_dive_analysis(request: DeepDiveRequest):
 
 @router.post("/explain-log-line", tags=["Analysis"])
 async def explain_log(request: ExplainLogRequest):
+    logging.info(f"Recebida solicitação para /explain-log-line com log_line: {request.log_line}")
     if not request.log_line:
         raise HTTPException(status_code=400, detail="A linha de log não pode estar vazia.")
     try:

@@ -109,28 +109,28 @@ async def synthesize_deep_node(state: AgentState):
     parsed_summary = _extract_json_from_string(summary)
     
     # Mock graph generation based on extracted entities
-    if parsed_summary:
-        nodes = []
-        edges = []
+    # if parsed_summary:
+    #     nodes = []
+    #     edges = []
         
-        client_nodes = {c: f"client_{i}" for i, c in enumerate(entities.get("clients", []))}
-        thread_nodes = {t: f"thread_{i}" for i, t in enumerate(entities.get("threads", []))}
-        user_nodes = {u: f"user_{i}" for i, u in enumerate(entities.get("users", []))}
+    #     client_nodes = {c: f"client_{i}" for i, c in enumerate(entities.get("clients", []))}
+    #     thread_nodes = {t: f"thread_{i}" for i, t in enumerate(entities.get("threads", []))}
+    #     user_nodes = {u: f"user_{i}" for i, u in enumerate(entities.get("users", []))}
 
-        for client, id in client_nodes.items():
-            nodes.append({"id": id, "label": f'Client\n{client}', "color": {"border": '#d97706', "background": '#fef3c7'}})
-        for thread, id in thread_nodes.items():
-            nodes.append({"id": id, "label": f'Thread {thread}', "color": {"border": '#4f46e5', "background": '#e0e7ff'}})
-        for user, id in user_nodes.items():
-             nodes.append({"id": id, "label": f'User\n{user}', "shape": "icon", "icon": {"face": "'Font Awesome 5 Free'", "weight": "900", "code": '\uf007', "size": 50, "color": '#3b82f6'}})
+    #     for client, id in client_nodes.items():
+    #         nodes.append({"id": id, "label": f'Client\n{client}', "color": {"border": '#d97706', "background": '#fef3c7'}})
+    #     for thread, id in thread_nodes.items():
+    #         nodes.append({"id": id, "label": f'Thread {thread}', "color": {"border": '#4f46e5', "background": '#e0e7ff'}})
+    #     for user, id in user_nodes.items():
+    #          nodes.append({"id": id, "label": f'User\n{user}', "shape": "icon", "icon": {"face": "'Font Awesome 5 Free'", "weight": "900", "code": '\uf007', "size": 50, "color": '#3b82f6'}})
 
-        # Simple edge creation logic
-        if client_nodes and thread_nodes:
-            edges.append({"from": list(client_nodes.values())[0], "to": list(thread_nodes.values())[0], "label": "conectou-se a"})
-        if user_nodes and thread_nodes:
-            edges.append({"from": list(user_nodes.values())[0], "to": list(thread_nodes.values())[0], "label": "iniciou"})
+    #     # Simple edge creation logic
+    #     if client_nodes and thread_nodes:
+    #         edges.append({"from": list(client_nodes.values())[0], "to": list(thread_nodes.values())[0], "label": "conectou-se a"})
+    #     if user_nodes and thread_nodes:
+    #         edges.append({"from": list(user_nodes.values())[0], "to": list(thread_nodes.values())[0], "label": "iniciou"})
 
-        parsed_summary["relationship_graph"] = { "nodes": nodes, "edges": edges }
+    #     parsed_summary["relationship_graph"] = { "nodes": nodes, "edges": edges }
 
     return {"final_summary": json.dumps(parsed_summary)}
 
