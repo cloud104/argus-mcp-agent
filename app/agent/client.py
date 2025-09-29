@@ -40,7 +40,7 @@ def get_mcp_client() -> MultiServerMCPClient:
             default_config = {
                 "tools": {
                     "transport": "streamable_http",
-                    "url": "http://127.0.0.1:9001/mcp",
+                    "url": "http://127.0.0.1:9001/mcp/",
                 }
             }
             _MCP_CLIENT = MultiServerMCPClient(default_config)

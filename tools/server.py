@@ -47,12 +47,12 @@ def _collection_from_index(index: str) -> str:
 # ---------------- TOOLS ----------------
 @mcp.tool()
 async def search_logs(index: str, window: str = "2h") -> Dict[str, Any]:
-    """Busca até 50 logs recentes do índice dentro da janela (ex.: '2h', '15m')."""
+    """Busca até 200 logs recentes do índice dentro da janela (ex.: '2h', '15m')."""
     es = await _ensure_es()
     resp = await es.search(
         index=index,
         query={"range": {"timestamp": {"gte": f"now-{window}", "lte": "now"}}},
-        size=50,
+        size=200,
         sort=[{"timestamp": {"order": "desc"}}],
     )
     hits = (resp.get("hits") or {}).get("hits", [])

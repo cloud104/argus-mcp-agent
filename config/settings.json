@@ -2,7 +2,7 @@
   "mcp_servers": {
     "tools": {
       "transport": "streamable_http",
-      "url": "http://127.0.0.1:9001/mcp"
+      "url": "http://127.0.0.1:8002/mcp/"
     }
   }
 }

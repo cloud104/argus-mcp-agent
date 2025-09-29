@@ -3,10 +3,11 @@ import logging
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Dict, Any
-from app.agent.workflow import run_initial_analysis, run_deep_dive_analysis
+
+from app.agent.workflow import run_initial_analysis, run_deep_dive_analysis, run_log_explanation
 
 router = APIRouter()
-ANALYSIS_TIMEOUT = 60.0
+ANALYSIS_TIMEOUT = 120.0
 
 class AnalysisRequest(BaseModel):
     msg: str
@@ -14,14 +15,14 @@ class AnalysisRequest(BaseModel):
     window: str
     session_id: str
 
-# --- CORREÇÃO ---
-# O modelo agora espera 'tool_params' em vez de 'window',
-# alinhando-se com o que o frontend envia.
 class DeepDiveRequest(BaseModel):
     msg: str
     index: str
     session_id: str
     tool_params: Dict[str, Any]
+
+class ExplainLogRequest(BaseModel):
+    log_line: str
 
 @router.post("/initial-analysis", tags=["Analysis"])
 async def initial_analysis(request: AnalysisRequest):
@@ -35,16 +36,15 @@ async def initial_analysis(request: AnalysisRequest):
     except asyncio.TimeoutError:
         raise HTTPException(
             status_code=408,
-            detail=f"A análise excedeu o tempo limite de {ANALYSIS_TIMEOUT} segundos."
+            detail=f"A análise inicial excedeu o tempo limite de {ANALYSIS_TIMEOUT} segundos."
         )
-    except Exception:
+    except Exception as e:
         logging.exception("Erro interno em /initial-analysis")
-        raise HTTPException(status_code=500, detail="Ocorreu um erro interno na análise inicial.")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/deep-dive", tags=["Analysis"])
 async def deep_dive_analysis(request: DeepDiveRequest):
     try:
-        # Agora usamos request.tool_params diretamente, que é o que o frontend envia.
         result = await asyncio.wait_for(
             run_deep_dive_analysis(request.msg, request.session_id, request.tool_params),
             timeout=ANALYSIS_TIMEOUT,
@@ -55,7 +55,23 @@ async def deep_dive_analysis(request: DeepDiveRequest):
             status_code=408,
             detail=f"A análise profunda excedeu o tempo limite de {ANALYSIS_TIMEOUT} segundos."
         )
-    except Exception:
-        logging.exception("Erro interno em /deep-dive")
-        raise HTTPException(status_code=500, detail="Ocorreu um erro interno na análise profunda.")
+    except Exception as e:
+        logging.error(f"Erro interno em /deep-dive: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Ocorreu um erro interno na análise profunda: {e}")
+
+@router.post("/explain-log-line", tags=["Analysis"])
+async def explain_log(request: ExplainLogRequest):
+    if not request.log_line:
+        raise HTTPException(status_code=400, detail="A linha de log não pode estar vazia.")
+    try:
+        result = await asyncio.wait_for(
+            run_log_explanation(request.log_line),
+            timeout=30.0 
+        )
+        return result
+    except asyncio.TimeoutError:
+         raise HTTPException(status_code=408, detail="A solicitação de explicação excedeu o tempo limite.")
+    except Exception as e:
+        logging.exception("Erro interno em /explain-log-line")
+        raise HTTPException(status_code=500, detail=str(e))
 

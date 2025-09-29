@@ -24,13 +24,12 @@ logger = logging.getLogger(__name__)
 # Config & Prompts
 set_llm_cache(InMemoryCache())
 BASE = Path(__file__).parent.parent.parent
-PROMPT_INITIAL_SUMMARY = (BASE / "prompts/initial_summary.md").read_text(encoding="utf-8")
-PROMPT_SYNTHESIZER = (BASE / "prompts/synthesize_analysis.md").read_text(encoding="utf-8")
+PROMPT_SYNTHESIZER_V2 = (BASE / "prompts/synthesize_analysis_v2.md").read_text(encoding="utf-8")
+PROMPT_EXPLAIN_LOG = (BASE / "prompts/explain_log_line.md").read_text(encoding="utf-8")
 
 # Modelos
-initial_llm = get_llm("planner_model")
-planner_llm = get_llm("planner_model")
 synthesizer_llm = get_llm("synthesizer_model")
+explanation_llm = get_llm("planner_model") 
 
 # Cliente MCP
 mcp_client = get_mcp_client()
@@ -56,191 +55,156 @@ def _extract_latest_tool_message_by_name(messages: List[BaseMessage], tool_name:
     return None
 
 def _extract_json_from_string(text: str) -> Optional[dict]:
-    match = re.search(r'```json\s*(\{.*?\})\s*```', text, re.DOTALL)
-    if match:
-        text = match.group(1)
+    # Regex to find JSON object within a string that might contain other text
+    match = re.search(r'\{.*\}', text, re.DOTALL)
+    if not match:
+        logger.warning("Nenhum JSON encontrado na string.")
+        return None
     try:
-        return json.loads(text)
+        return json.loads(match.group(0))
     except json.JSONDecodeError:
-        logger.warning("Falha ao analisar a resposta do LLM como JSON direto.")
+        logger.warning(f"Falha ao analisar a resposta do LLM como JSON: {text}")
         return None
 
 class AgentState(TypedDict):
     messages: List[BaseMessage]
     tool_params: dict
     final_summary: str
-    kpis: Dict[str, Any]
 
-# WORKFLOW 1: Análise Inicial
+# --- WORKFLOW 1: Análise Inicial (Apenas busca de logs) ---
 def act_initial_node(state: AgentState):
     logger.info("--- NÓ (Inicial): act ---")
     tool_call = {"name": "search_logs", "args": state["tool_params"], "id": str(uuid.uuid4())}
     response = AIMessage(content="", tool_calls=[tool_call])
-    logger.info("--- SAÍDA (act): A preparar chamada para a ferramenta 'search_logs'")
+    logger.info(f"--- SAÍDA (act): A preparar chamada para a ferramenta 'search_logs' com os parâmetros: {state['tool_params']}")
     return {"messages": state["messages"] + [response]}
 
-def aggregate_logs_node(state: AgentState):
-    """Processa os logs brutos e calcula os KPIs."""
-    logger.info("--- NÓ (Inicial): aggregate_logs ---")
-    tool_message = _extract_latest_tool_message_by_name(state["messages"], "search_logs")
-    logs = []
-    if tool_message and tool_message.content:
-        try:
-            logs = json.loads(tool_message.content).get("logs_encontrados", [])
-        except (json.JSONDecodeError, TypeError):
-            logs = []
-    
-    kpis = { "critical_errors": 0, "warnings": 0, "info_events": 0 }
-    if not logs:
-        logger.info("--- SAÍDA (aggregate_logs): Nenhum log para agregar.")
-        return {"kpis": kpis}
-
-    severities = [log.get("severity", "").upper() for log in logs]
-    counts = Counter(severities)
-    
-    kpis["critical_errors"] = counts.get("FATAL", 0) + counts.get("ERROR", 0) + counts.get("CRITICAL", 0)
-    kpis["warnings"] = counts.get("WARNING", 0)
-    kpis["info_events"] = counts.get("INFO", 0)
-
-    logger.info(f"--- SAÍDA (aggregate_logs): KPIs calculados: {kpis}")
-    return {"kpis": kpis}
-
-async def synthesize_initial_node(state: AgentState):
-    logger.info("--- NÓ (Inicial): synthesize ---")
-    tool_message = _extract_latest_tool_message_by_name(state["messages"], "search_logs")
-    tool_result_content = tool_message.content if tool_message else ""
-    kpis = state.get("kpis", {})
-
-    if not tool_result_content.strip() or tool_result_content in ("{}", "[]"):
-        logger.info("--- SAÍDA (synthesize_initial): Sem dados para analisar, a retornar mensagem padrão.")
-        answer = {"sem_dados": True, "motivo": "A ferramenta de busca não retornou logs."}
-        return {"messages": state["messages"] + [AIMessage(content=json.dumps(answer))]}
-
-    kpi_context = f"## KPIs Pré-agregados\n\n{json.dumps(kpis, indent=2)}"
-    final_prompt = f"{PROMPT_INITIAL_SUMMARY}\n\n{kpi_context}\n\n## Evidências (Logs Brutos)\n\n{tool_result_content}"
-    response = await initial_llm.ainvoke(final_prompt)
-    logger.info("--- SAÍDA (synthesize_initial): Dashboard inicial gerado.")
-    return {"messages": state["messages"] + [AIMessage(content=response.content)]}
-
-# WORKFLOW 2: Análise Profunda
-def retrieve_node(state: AgentState):
-    logger.info("--- NÓ: retrieve ---")
-    user_input = next((m.content for m in state["messages"] if isinstance(m, HumanMessage)), "")
-    idx = state["tool_params"].get("index", "")
-    tool_call = {"name": "retrieve_historical_context", "args": {"index": idx, "query": user_input}, "id": str(uuid.uuid4())}
-    logger.info("--- SAÍDA (retrieve): A preparar chamada para 'retrieve_historical_context'")
-    return {"messages": state["messages"] + [AIMessage(content="", tool_calls=[tool_call])]}
-
-def planner_node(state: AgentState):
-    logger.info("--- NÓ: planner ---")
-    tool_call = {"name": "search_logs", "args": state["tool_params"], "id": str(uuid.uuid4())}
-    logger.info("--- SAÍDA (planner): A preparar chamada para a ferramenta 'search_logs'")
-    return {"messages": state["messages"] + [AIMessage(content="", tool_calls=[tool_call])]}
-
+# --- WORKFLOW 2: Análise Profunda ---
 async def synthesize_deep_node(state: AgentState):
-    logger.info("--- NÓ: synthesize ---")
-    search_logs_msg = _extract_latest_tool_message_by_name(state["messages"], "search_logs")
-    tool_result_content = search_logs_msg.content if search_logs_msg else "Sem evidências em tempo real."
-    retrieve_msg = _extract_latest_tool_message_by_name(state["messages"], "retrieve_historical_context")
-    historical_context = "Sem histórico relevante."
-    if retrieve_msg and retrieve_msg.content:
-        try:
-            content_dict = json.loads(retrieve_msg.content)
-            history = content_dict.get("historico_relevante")
-            if history and isinstance(history, list): historical_context = "\n".join(history)
-        except (json.JSONDecodeError, TypeError): pass
+    logger.info("--- NÓ: synthesize_deep ---")
+    tool_params = state.get("tool_params", {})
+    logs_to_analyze = tool_params.get("logs", []) 
+    
+    if not logs_to_analyze:
+        return {"final_summary": json.dumps({"resumo_analitico": "Nenhum log fornecido para análise.", "hipotese_causa_raiz": "N/A", "acoes_recomendadas": []})}
 
-    final_prompt = f"{PROMPT_SYNTHESIZER}\n\n## Histórico e Evidências\n\nContexto Histórico:\n{historical_context}\n\nEvidências:\n{tool_result_content}"
+    # Simple entity extraction for demonstration
+    entities = {
+        "users": list(set(re.findall(r'user (\w+)', json.dumps(logs_to_analyze, ensure_ascii=False), re.IGNORECASE))),
+        "threads": list(set(re.findall(r'Thread (\d+)', json.dumps(logs_to_analyze, ensure_ascii=False)))),
+        "clients": list(set(re.findall(r'client ([\d\.]+:\d+)', json.dumps(logs_to_analyze, ensure_ascii=False))))
+    }
+    
+    prompt_template = PROMPT_SYNTHESIZER_V2
+    final_prompt = prompt_template.format(
+        log_data=json.dumps(logs_to_analyze, indent=2, ensure_ascii=False),
+        entities_data=json.dumps(entities, indent=2, ensure_ascii=False)
+    )
+    
     logger.info("A chamar o LLM para a síntese final (deep-dive)...")
     response = await synthesizer_llm.ainvoke(final_prompt)
     summary = response.content
-    logger.info(f"--- SAÍDA (synthesize): Resumo gerado (primeiros 100 chars): {summary[:100].replace(chr(10), ' ')}...")
-    return {"final_summary": summary}
+    logger.info(f"--- SAÍDA (synthesize_deep): Resumo gerado: {summary[:150]}...")
+    
+    parsed_summary = _extract_json_from_string(summary)
+    
+    # Mock graph generation based on extracted entities
+    if parsed_summary:
+        nodes = []
+        edges = []
+        
+        client_nodes = {c: f"client_{i}" for i, c in enumerate(entities.get("clients", []))}
+        thread_nodes = {t: f"thread_{i}" for i, t in enumerate(entities.get("threads", []))}
+        user_nodes = {u: f"user_{i}" for i, u in enumerate(entities.get("users", []))}
 
-def save_node(state: AgentState):
-    logger.info("--- NÓ: save ---")
-    summary_to_save = state.get("final_summary")
-    if summary_to_save and "INDETERMINADA" not in summary_to_save:
-        summary_obj = _extract_json_from_string(summary_to_save)
-        if summary_obj:
-            tool_call = {"name": "save_analysis_summary", "args": {"index": state['tool_params']['index'], "summary": json.dumps(summary_obj)}, "id": str(uuid.uuid4())}
-            logger.info("--- SAÍDA (save): A preparar chamada para a ferramenta 'save_analysis_summary'")
-            return {"messages": state["messages"] + [AIMessage(content="", tool_calls=[tool_call])]}
-    logger.info("--- SAÍDA (save): Nenhum resumo para guardar. A saltar.")
-    return {}
+        for client, id in client_nodes.items():
+            nodes.append({"id": id, "label": f'Client\n{client}', "color": {"border": '#d97706', "background": '#fef3c7'}})
+        for thread, id in thread_nodes.items():
+            nodes.append({"id": id, "label": f'Thread {thread}', "color": {"border": '#4f46e5', "background": '#e0e7ff'}})
+        for user, id in user_nodes.items():
+             nodes.append({"id": id, "label": f'User\n{user}', "shape": "icon", "icon": {"face": "'Font Awesome 5 Free'", "weight": "900", "code": '\uf007', "size": 50, "color": '#3b82f6'}})
 
-def conditional_router(state: AgentState) -> Literal["plan", "synthesize", "__end__"]:
-    logger.info("--- NÓ: conditional_router ---")
-    last_message = state["messages"][-1] if state.get("messages") else None
-    if isinstance(last_message, ToolMessage):
-        if last_message.name == "retrieve_historical_context":
-            logger.info("--- Router: Histórico recuperado. A ir para o planeamento.")
-            return "plan"
-        if last_message.name == "search_logs":
-            logger.info("--- Router: Logs de busca obtidos. A ir para a síntese.")
-            return "synthesize"
-        if last_message.name == "save_analysis_summary":
-            logger.info("--- Router: Resumo guardado. A terminar o fluxo.")
-            return "__end__"
-    logger.warning(f"--- Router: Condição inesperada. A terminar. Última mensagem: {type(last_message).__name__}")
-    return "__end__"
+        # Simple edge creation logic
+        if client_nodes and thread_nodes:
+            edges.append({"from": list(client_nodes.values())[0], "to": list(thread_nodes.values())[0], "label": "conectou-se a"})
+        if user_nodes and thread_nodes:
+            edges.append({"from": list(user_nodes.values())[0], "to": list(thread_nodes.values())[0], "label": "iniciou"})
 
-_tool_node: Optional[ToolNode] = None; _initial_graph = None; _deep_dive_graph = None; memory = MemorySaver()
+        parsed_summary["relationship_graph"] = { "nodes": nodes, "edges": edges }
 
-def _build_initial_graph(tool_node: ToolNode):
-    gb = StateGraph(AgentState)
-    gb.add_node("act", act_initial_node)
-    gb.add_node("tools", tool_node)
-    gb.add_node("aggregate", aggregate_logs_node)
-    gb.add_node("synthesize", synthesize_initial_node)
-    gb.add_edge(START, "act"); gb.add_edge("act", "tools"); gb.add_edge("tools", "aggregate"); gb.add_edge("aggregate", "synthesize"); gb.add_edge("synthesize", END)
-    return gb.compile(checkpointer=memory)
+    return {"final_summary": json.dumps(parsed_summary)}
 
-def _build_deep_graph(tool_node: ToolNode):
-    gb = StateGraph(AgentState)
-    gb.add_node("retrieve", retrieve_node); gb.add_node("plan", planner_node)
-    gb.add_node("synthesize", synthesize_deep_node); gb.add_node("save", save_node)
-    gb.add_node("tools", tool_node)
-    gb.add_edge(START, "retrieve"); gb.add_edge("retrieve", "tools")
-    gb.add_conditional_edges("tools", conditional_router, {"plan": "plan", "synthesize": "synthesize", "__end__": END})
-    gb.add_edge("plan", "tools"); gb.add_edge("synthesize", "save"); gb.add_edge("save", "tools")
-    return gb.compile(checkpointer=memory)
+# --- WORKFLOW 3: Explicação de Linha de Log ---
+async def run_log_explanation(log_message: str) -> Dict[str, str]:
+    logger.info(f"Gerando explicação para o log: {log_message}")
+    prompt = PROMPT_EXPLAIN_LOG.format(log_line=log_message)
+    try:
+        response = await explanation_llm.ainvoke(prompt)
+        explanation = response.content.strip()
+        return {"explanation": explanation}
+    except Exception as e:
+        logger.error(f"Erro ao gerar explicação do log: {e}")
+        return {"explanation": "Não foi possível analisar este log no momento."}
+
+# --- GRAPH CONSTRUCTION ---
+_tool_node: Optional[ToolNode] = None
+_initial_graph = None
+_deep_dive_graph = None
+memory = MemorySaver()
+
+def _build_graphs():
+    global _tool_node, _initial_graph, _deep_dive_graph
+    _tool_node = ToolNode(_TOOLS)
+
+    initial_builder = StateGraph(AgentState)
+    initial_builder.add_node("act", act_initial_node)
+    initial_builder.add_node("tools", _tool_node)
+    initial_builder.add_edge(START, "act")
+    initial_builder.add_edge("act", "tools")
+    initial_builder.add_edge("tools", END)
+    _initial_graph = initial_builder.compile(checkpointer=MemorySaver())
+
+    deep_dive_builder = StateGraph(AgentState)
+    deep_dive_builder.add_node("synthesize_deep", synthesize_deep_node)
+    deep_dive_builder.add_edge(START, "synthesize_deep")
+    deep_dive_builder.add_edge("synthesize_deep", END)
+    _deep_dive_graph = deep_dive_builder.compile(checkpointer=MemorySaver())
 
 async def ensure_graphs():
-    global _tool_node, _initial_graph, _deep_dive_graph
-    if _tool_node is None:
-        _tool_node = ToolNode(await init_tools())
-    if _initial_graph is None:
-        _initial_graph = _build_initial_graph(_tool_node)
-    if _deep_dive_graph is None:
-        _deep_dive_graph = _build_deep_graph(_tool_node)
+    global _TOOLS
+    if _TOOLS is None:
+        await init_tools()
+        _build_graphs()
 
+# --- MAIN EXECUTION FUNCTIONS ---
 async def run_initial_analysis(user_input: str, session_id: str, tool_params: dict) -> Dict[str, Any]:
     await ensure_graphs()
     config = {"configurable": {"thread_id": session_id}}
     inputs = {"messages": [HumanMessage(content=user_input)], "tool_params": tool_params}
+    
     final_state = await _initial_graph.ainvoke(inputs, config)
-    answer_content = final_state["messages"][-1].content if final_state and final_state.get("messages") else "{}"
+    
     tool_message = _extract_latest_tool_message_by_name(final_state["messages"], "search_logs")
-    evidence_overview = json.loads(tool_message.content) if tool_message and tool_message.content else {}
-    parsed_answer = _extract_json_from_string(answer_content) or {"error": "A resposta da análise inicial não era um JSON válido."}
-    response = {"answer": parsed_answer, "evidence_overview": evidence_overview, "session_id": session_id}
-    logger.info(f"--- RESPOSTA FINAL (initial-analysis): {str(response)[:200]}...")
+    evidence_overview = json.loads(tool_message.content) if tool_message and tool_message.content else {"logs_encontrados": []}
+    
+    response = {"answer": {}, "evidence_overview": evidence_overview, "session_id": session_id}
+    logger.info(f"--- RESPOSTA FINAL (initial-analysis): {len(evidence_overview.get('logs_encontrados',[]))} logs encontrados.")
     return response
 
 async def run_deep_dive_analysis(user_input: str, session_id: str, tool_params: dict) -> Dict[str, Any]:
     await ensure_graphs()
     config = {"configurable": {"thread_id": session_id}}
-    current_state = _deep_dive_graph.get_state(config)
-    messages = current_state.values.get('messages', []) if current_state else []
-    if not any(isinstance(m, HumanMessage) for m in messages):
-         messages.append(HumanMessage(content=user_input))
-    inputs = {"messages": messages, "tool_params": tool_params}
+    inputs = {"messages": [HumanMessage(content=user_input)], "tool_params": tool_params}
+    
     final_state = await _deep_dive_graph.ainvoke(inputs, config)
-    answer_obj = _extract_json_from_string(final_state.get("final_summary", "{}")) or {"error": "Não foi possível gerar uma análise final."}
-    tool_message = _extract_latest_tool_message_by_name(final_state.get("messages", []), "search_logs")
-    evidence_overview = json.loads(tool_message.content) if tool_message and tool_message.content else {}
-    response = {"answer": answer_obj, "evidence_overview": evidence_overview, "session_id": session_id}
+    
+    summary_content = final_state.get("final_summary", "{}")
+    parsed_summary = _extract_json_from_string(summary_content)
+    
+    if not parsed_summary:
+        parsed_summary = {"resumo_analitico": "Ocorreu um erro ao gerar a análise profunda.", "hipotese_causa_raiz": "Formato de resposta da IA inválido.", "acoes_recomendadas": ["Verificar logs do agente."]}
+
+    response = {"answer": parsed_summary, "session_id": session_id}
     logger.info(f"--- RESPOSTA FINAL (deep-dive): {str(response)[:200]}...")
     return response
 
