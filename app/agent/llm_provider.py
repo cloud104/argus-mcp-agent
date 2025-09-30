@@ -43,6 +43,7 @@ def get_llm(model_key: str, temperature: float = 0.1):
     provider = config.get("provider")
     class_path = config.get("class_path")
     model_name = config.get("model_name")
+    max_tokens = config.get("max_tokens")
 
     if not all([provider, class_path, model_name]):
          raise ValueError(f"Configuração inválida para a chave '{model_key}' em models.json.")
@@ -67,6 +68,7 @@ def get_llm(model_key: str, temperature: float = 0.1):
     return model_class(
         model=model_name,
         temperature=temperature,
-        api_key=api_key
+        api_key=api_key,
+        max_tokens=max_tokens
     )
 

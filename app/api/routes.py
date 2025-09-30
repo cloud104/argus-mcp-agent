@@ -2,10 +2,9 @@ import asyncio
 import logging
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import Dict, Any
+from typing import List, TypedDict, Optional, Dict, Any, Literal
 
-from app.agent.workflow import run_initial_analysis, run_deep_dive_analysis, run_log_explanation
-
+from app.agent.workflow import run_initial_analysis, run_deep_dive_analysis, run_log_explanation, run_chat_turn
 router = APIRouter()
 ANALYSIS_TIMEOUT = 120.0
 
@@ -20,6 +19,13 @@ class DeepDiveRequest(BaseModel):
     index: str
     session_id: str
     tool_params: Dict[str, Any]
+    
+    
+class ChatRequest(BaseModel):
+    user_input: str
+    session_id: str
+    initial_context: Optional[Dict[str, Any]] = None
+   
 
 class ExplainLogRequest(BaseModel):
     log_line: str
@@ -74,5 +80,20 @@ async def explain_log(request: ExplainLogRequest):
          raise HTTPException(status_code=408, detail="A solicitação de explicação excedeu o tempo limite.")
     except Exception as e:
         logging.exception("Erro interno em /explain-log-line")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/chat", tags=["Analysis"])
+async def chat(request: ChatRequest):
+    try:
+        result = await asyncio.wait_for(
+            run_chat_turn(request.user_input, request.session_id, request.initial_context),
+            timeout=ANALYSIS_TIMEOUT,
+        )
+        return result
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=408, detail="A sua pergunta excedeu o tempo limite.")
+    except Exception as e:
+        logging.exception("Erro interno em /chat")
         raise HTTPException(status_code=500, detail=str(e))
 
