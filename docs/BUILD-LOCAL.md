@@ -59,6 +59,25 @@ make docker-push VERSION=v1.2.3
 make docker-build-push VERSION=v1.2.3
 ```
 
+### Build com Timestamp (Recomendado)
+
+Para ambientes de desenvolvimento/staging, use tags com timestamp no formato `YYYYMMDD-HHMMSS`:
+
+```bash
+# Build e push com timestamp automático
+make docker-build-push-timestamp
+
+# Exemplo de tag gerada:
+# southamerica-east1-docker.pkg.dev/tcloud-devops/tcloud-devops/argus-app:20250921-201146
+# southamerica-east1-docker.pkg.dev/tcloud-devops/tcloud-devops/argus-mcp-server:20250921-201146
+```
+
+**Vantagens do timestamp:**
+- ✅ Rastreabilidade: sabe exatamente quando a imagem foi criada
+- ✅ Uniqueness: cada build gera uma tag única
+- ✅ Rollback fácil: pode voltar para uma versão específica por data/hora
+- ✅ Histórico: mantém histórico de todas as versões no registry
+
 ### Criar Tags Adicionais
 
 ```bash
@@ -71,9 +90,9 @@ make docker-push VERSION=v1.2.3
 
 ## Imagens Geradas
 
-O build cria **duas imagens** a partir do mesmo Dockerfile usando multi-stage build:
+O build cria **duas imagens especializadas** usando Dockerfiles separados para máxima otimização:
 
-### 1. App Principal
+### 1. App Principal (Dockerfile.app)
 ```
 southamerica-east1-docker.pkg.dev/tcloud-devops/tcloud-devops/argus-app:latest
 southamerica-east1-docker.pkg.dev/tcloud-devops/tcloud-devops/argus-app:v1.2.3
@@ -82,10 +101,13 @@ southamerica-east1-docker.pkg.dev/tcloud-devops/tcloud-devops/argus-app:v1.2.3
 **Características:**
 - Porta: 8000
 - Comando: `uvicorn main:app --host 0.0.0.0 --port 8000`
+- Contém: `main.py`, `app/`, `prompts/`, `config/`
+- **NÃO** contém: `tools/` (MCP server)
 - Distroless Python 3.13
 - Non-root user (uid 65532)
+- **Mais enxuta**: apenas código da aplicação
 
-### 2. MCP Server
+### 2. MCP Server (Dockerfile.mcp)
 ```
 southamerica-east1-docker.pkg.dev/tcloud-devops/tcloud-devops/argus-mcp-server:latest
 southamerica-east1-docker.pkg.dev/tcloud-devops/tcloud-devops/argus-mcp-server:v1.2.3
@@ -94,30 +116,87 @@ southamerica-east1-docker.pkg.dev/tcloud-devops/tcloud-devops/argus-mcp-server:v
 **Características:**
 - Porta: 8002
 - Comando: `uvicorn tools.server:app --host 0.0.0.0 --port 8002`
+- Contém: `tools/`, `config/`
+- **NÃO** contém: `main.py`, `app/`, `prompts/` (aplicação principal)
 - Distroless Python 3.13
 - Non-root user (uid 65532)
+- **Mais enxuta**: apenas código do MCP server
 
-## Estrutura do Dockerfile
+### Por que 2 imagens especializadas?
 
-O `Dockerfile` usa multi-stage build com 4 estágios:
+✅ **Vantagens:**
+- **Menor tamanho**: Cada imagem contém apenas o código necessário
+- **Segurança**: Reduz superfície de ataque (menos código = menos vulnerabilidades)
+- **Performance**: Builds mais rápidos (menos arquivos para copiar)
+- **Manutenção**: Mais fácil entender o que cada imagem contém
+- **Deploy**: Pull mais rápido em produção
+
+## Estrutura dos Dockerfiles
+
+Temos **2 Dockerfiles especializados**, cada um otimizado para seu serviço:
+
+### Dockerfile.app (Aplicação Principal)
 
 ```dockerfile
-# Stage 1: builder - Instala dependências e compila
+# Stage 1: builder - Instala dependências
 FROM python:3.13-slim as builder
+WORKDIR /app
+RUN apt-get update && apt-get install -y gcc g++ curl
+RUN pip install --no-cache-dir uv
+COPY requirements.txt .
+RUN uv pip install --system --no-cache-dir -r requirements.txt
 
-# Stage 2: base - Imagem base com distroless
-FROM gcr.io/distroless/python3-debian12 as base
+# Copy APENAS código da app (exclude tools/)
+COPY main.py .
+COPY app/ ./app/
+COPY prompts/ ./prompts/
+COPY config/ ./config/
 
-# Stage 3: app - Aplicação principal
-FROM base as app
+# Stage 2: production - Distroless
+FROM gcr.io/distroless/python3-debian12
+COPY --from=builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
+WORKDIR /app
+COPY --from=builder /app/main.py ./main.py
+COPY --from=builder /app/app ./app
+COPY --from=builder /app/prompts ./prompts
+COPY --from=builder /app/config ./config
+USER nonroot:nonroot
 EXPOSE 8000
 CMD ["/usr/local/bin/uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+```
 
-# Stage 4: mcp-server - MCP Server
-FROM base as mcp-server
+### Dockerfile.mcp (MCP Server)
+
+```dockerfile
+# Stage 1: builder - Instala dependências
+FROM python:3.13-slim as builder
+WORKDIR /app
+RUN apt-get update && apt-get install -y gcc g++ curl
+RUN pip install --no-cache-dir uv
+COPY requirements.txt .
+RUN uv pip install --system --no-cache-dir -r requirements.txt
+
+# Copy APENAS código do MCP server (exclude app/, prompts/)
+COPY tools/ ./tools/
+COPY config/ ./config/
+
+# Stage 2: production - Distroless
+FROM gcr.io/distroless/python3-debian12
+COPY --from=builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
+WORKDIR /app
+COPY --from=builder /app/tools ./tools
+COPY --from=builder /app/config ./config
+USER nonroot:nonroot
 EXPOSE 8002
 CMD ["/usr/local/bin/uvicorn", "tools.server:app", "--host", "0.0.0.0", "--port", "8002"]
 ```
+
+**Principais diferenças:**
+- `Dockerfile.app`: Copia `main.py`, `app/`, `prompts/` (exclui `tools/`)
+- `Dockerfile.mcp`: Copia `tools/` (exclui `main.py`, `app/`, `prompts/`)
+- Ambos compartilham: `config/`, `requirements.txt`, mesma base distroless
 
 ## Uso das Imagens
 
@@ -255,19 +334,46 @@ make docker-build
 
 ## Estratégia de Versionamento
 
-Recomendações:
+Recomendações para diferentes ambientes:
 
+### Development
 ```bash
-# Development (branch feature)
-make docker-build-push VERSION=dev-$(git rev-parse --short HEAD)
+# Usar timestamp para desenvolvimento
+make docker-build-push-timestamp
 
-# Staging (branch develop)
-make docker-build-push VERSION=staging
+# Resultado: argus-app:20250921-201146
+```
 
-# Production (tag git)
+### Staging
+```bash
+# Usar timestamp ou tag específica
+make docker-build-push-timestamp
+
+# Ou com tag manual:
+make docker-build-push VERSION=staging-$(date +%Y%m%d)
+```
+
+### Production
+```bash
+# Usar semantic versioning (vX.Y.Z)
 git tag v1.2.3
 make docker-build-push VERSION=v1.2.3
+
+# Também criar tag latest para produção
+make docker-tag VERSION=v1.2.3
+docker tag $(DOCKER_REGISTRY)/argus-app:v1.2.3 $(DOCKER_REGISTRY)/argus-app:latest
+docker tag $(DOCKER_REGISTRY)/argus-mcp-server:v1.2.3 $(DOCKER_REGISTRY)/argus-mcp-server:latest
+make docker-push VERSION=latest
 ```
+
+### Resumo de Tags Recomendadas
+
+| Ambiente | Formato Tag | Exemplo | Comando |
+|----------|-------------|---------|---------|
+| Dev | `YYYYMMDD-HHMMSS` | `20250921-201146` | `make docker-build-push-timestamp` |
+| Staging | `YYYYMMDD-HHMMSS` | `20250921-201146` | `make docker-build-push-timestamp` |
+| Prod | `vX.Y.Z` | `v1.2.3` | `make docker-build-push VERSION=v1.2.3` |
+| Prod Latest | `latest` | `latest` | Manual (após validação) |
 
 ## CI/CD Futuro
 

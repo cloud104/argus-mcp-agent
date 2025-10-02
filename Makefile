@@ -7,6 +7,7 @@ DOCKER_REGISTRY ?= southamerica-east1-docker.pkg.dev/tcloud-devops/tcloud-devops
 APP_IMAGE ?= argus-app
 MCP_IMAGE ?= argus-mcp-server
 VERSION ?= latest
+TIMESTAMP := $(shell date +%Y%m%d-%H%M%S)
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
@@ -35,24 +36,50 @@ docker-login: ## Login to GCP Artifact Registry
 	gcloud auth configure-docker southamerica-east1-docker.pkg.dev
 
 docker-build: ## Build production Docker images (app + mcp-server)
-	@echo "Building App image..."
-	docker build --target app -t $(DOCKER_REGISTRY)/$(APP_IMAGE):$(VERSION) .
-	@echo "Building MCP Server image..."
-	docker build --target mcp-server -t $(DOCKER_REGISTRY)/$(MCP_IMAGE):$(VERSION) .
+	@echo "🔨 Building App image..."
+	docker build -f Dockerfile.app -t $(DOCKER_REGISTRY)/$(APP_IMAGE):$(VERSION) .
+	@echo "🔨 Building MCP Server image..."
+	docker build -f Dockerfile.mcp -t $(DOCKER_REGISTRY)/$(MCP_IMAGE):$(VERSION) .
 	@echo "✅ Images built successfully!"
+	@echo ""
+	@echo "Images created:"
+	@echo "  - $(DOCKER_REGISTRY)/$(APP_IMAGE):$(VERSION)"
+	@echo "  - $(DOCKER_REGISTRY)/$(MCP_IMAGE):$(VERSION)"
 
 docker-build-dev: ## Build development Docker images
 	docker build -f Dockerfile.dev -t argus-app:dev .
 	docker build -f Dockerfile.dev -t argus-mcp-server:dev .
 
 docker-push: ## Push Docker images to GCP Artifact Registry
-	@echo "Pushing App image..."
+	@echo "📤 Pushing App image..."
 	docker push $(DOCKER_REGISTRY)/$(APP_IMAGE):$(VERSION)
-	@echo "Pushing MCP Server image..."
+	@echo "📤 Pushing MCP Server image..."
 	docker push $(DOCKER_REGISTRY)/$(MCP_IMAGE):$(VERSION)
 	@echo "✅ Images pushed successfully!"
+	@echo ""
+	@echo "Images available at:"
+	@echo "  - $(DOCKER_REGISTRY)/$(APP_IMAGE):$(VERSION)"
+	@echo "  - $(DOCKER_REGISTRY)/$(MCP_IMAGE):$(VERSION)"
 
 docker-build-push: docker-build docker-push ## Build and push images in one command
+
+docker-build-timestamp: ## Build with timestamp tag (YYYYMMDD-HHMMSS)
+	@echo "🔨 Building with timestamp: $(TIMESTAMP)"
+	docker build -f Dockerfile.app -t $(DOCKER_REGISTRY)/$(APP_IMAGE):$(TIMESTAMP) .
+	docker build -f Dockerfile.mcp -t $(DOCKER_REGISTRY)/$(MCP_IMAGE):$(TIMESTAMP) .
+	@echo "✅ Images built with timestamp!"
+	@echo ""
+	@echo "Images created:"
+	@echo "  - $(DOCKER_REGISTRY)/$(APP_IMAGE):$(TIMESTAMP)"
+	@echo "  - $(DOCKER_REGISTRY)/$(MCP_IMAGE):$(TIMESTAMP)"
+
+docker-push-timestamp: ## Push images with timestamp tag
+	@echo "📤 Pushing images with timestamp: $(TIMESTAMP)"
+	docker push $(DOCKER_REGISTRY)/$(APP_IMAGE):$(TIMESTAMP)
+	docker push $(DOCKER_REGISTRY)/$(MCP_IMAGE):$(TIMESTAMP)
+	@echo "✅ Images pushed successfully!"
+
+docker-build-push-timestamp: docker-build-timestamp docker-push-timestamp ## Build and push with timestamp in one command
 
 docker-tag: ## Tag images with custom version (usage: make docker-tag VERSION=v1.0.0)
 	docker tag $(DOCKER_REGISTRY)/$(APP_IMAGE):latest $(DOCKER_REGISTRY)/$(APP_IMAGE):$(VERSION)

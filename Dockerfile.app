@@ -1,4 +1,6 @@
-# Multi-stage build for production with distroless base
+# Multi-stage build for Main Application (production)
+# Imagem otimizada contendo apenas código e dependências da aplicação principal
+
 # Stage 1: Builder
 FROM python:3.13-slim as builder
 
@@ -18,11 +20,14 @@ RUN pip install --no-cache-dir uv
 COPY requirements.txt .
 RUN uv pip install --system --no-cache-dir -r requirements.txt
 
-# Copy application code
-COPY . .
+# Copy only what the app needs (exclude tools/)
+COPY main.py .
+COPY app/ ./app/
+COPY prompts/ ./prompts/
+COPY config/ ./config/
 
-# Stage 2: Base production image with distroless
-FROM gcr.io/distroless/python3-debian12 as base
+# Stage 2: Production image with distroless
+FROM gcr.io/distroless/python3-debian12
 
 # Copy Python packages from builder
 COPY --from=builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
@@ -33,27 +38,18 @@ ENV PYTHONPATH=/usr/local/lib/python3.13/site-packages
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 
-# Copy application
+# Copy application code (only what's needed)
 WORKDIR /app
-COPY --from=builder /app /app
+COPY --from=builder /app/main.py ./main.py
+COPY --from=builder /app/app ./app
+COPY --from=builder /app/prompts ./prompts
+COPY --from=builder /app/config ./config
 
 # Run as non-root user (distroless default is nonroot uid 65532)
 USER nonroot:nonroot
 
-# Stage 3: Main Application
-FROM base as app
-
-# Expose port for main app
+# Expose port
 EXPOSE 8000
 
 # Start the main application
 CMD ["/usr/local/bin/uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
-
-# Stage 4: MCP Server
-FROM base as mcp-server
-
-# Expose port for MCP server
-EXPOSE 8002
-
-# Start the MCP server
-CMD ["/usr/local/bin/uvicorn", "tools.server:app", "--host", "0.0.0.0", "--port", "8002"]
