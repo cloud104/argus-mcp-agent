@@ -1,0 +1,24 @@
+# Requirements for MCP Server
+# Dependencies specifically needed by tools/server.py
+
+# Core Web Framework
+fastapi==0.117.1
+uvicorn[standard]==0.37.0
+python-dotenv==1.1.1
+
+# FastMCP (Model Context Protocol)
+fastmcp==2.12.3
+
+# Elasticsearch Client
+elasticsearch==8.14.0
+
+# ChromaDB (RAG - Vector Database)
+chromadb==1.1.0
+
+# Machine Learning (Anomaly Detection)
+scikit-learn==1.7.2
+pandas==2.3.2
+numpy==2.3.3
+
+# Utilities
+typing-extensions==4.15.0

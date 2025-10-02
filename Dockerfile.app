@@ -17,8 +17,8 @@ RUN apt-get update && apt-get install -y \
 RUN pip install --no-cache-dir uv
 
 # Copy requirements and install dependencies
-COPY requirements.txt .
-RUN uv pip install --system --no-cache-dir -r requirements.txt
+COPY requirements-app.txt .
+RUN uv pip install --system --no-cache-dir -r requirements-app.txt
 
 # Copy only what the app needs (exclude tools/)
 COPY main.py .
