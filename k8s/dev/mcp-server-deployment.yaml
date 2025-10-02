@@ -18,6 +18,7 @@ spec:
         app: argus-mcp-server
         component: backend
     spec:
+      terminationGracePeriodSeconds: 30
       containers:
       - name: mcp-server
         image: argus-mcp-server:latest
@@ -51,19 +52,27 @@ spec:
           limits:
             memory: "512Mi"
             cpu: "500m"
+        startupProbe:
+          httpGet:
+            path: /health/startup
+            port: 8002
+          initialDelaySeconds: 3
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 12
         livenessProbe:
           httpGet:
-            path: /
+            path: /health/live
             port: 8002
-          initialDelaySeconds: 10
+          initialDelaySeconds: 0
           periodSeconds: 10
           timeoutSeconds: 5
           failureThreshold: 3
         readinessProbe:
           httpGet:
-            path: /
+            path: /health/ready
             port: 8002
-          initialDelaySeconds: 5
+          initialDelaySeconds: 0
           periodSeconds: 5
           timeoutSeconds: 3
           failureThreshold: 3

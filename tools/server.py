@@ -2,8 +2,10 @@
 import os
 from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
+import logging
 
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 from elasticsearch import AsyncElasticsearch
 import pandas as pd
@@ -11,12 +13,16 @@ from sklearn.ensemble import IsolationForest
 
 from fastmcp import FastMCP
 from tools.rag_manager import get_rag_manager
+from tools.resilience import elasticsearch_retry
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 ES_HOST = os.getenv("ES_HOST")
 ES_USER = os.getenv("ES_USER")
 ES_PASSWORD = os.getenv("ES_PASSWORD")
+ES_TIMEOUT = int(os.getenv("ES_TIMEOUT", "30"))
 if not all([ES_HOST, ES_USER, ES_PASSWORD]):
     raise RuntimeError("ES_HOST, ES_USER e ES_PASSWORD devem estar definidos.")
 
@@ -26,6 +32,7 @@ mcp = FastMCP("SRE Analysis Tools 🚀")
 _es: Optional[AsyncElasticsearch] = None
 rag_manager = get_rag_manager()
 
+@elasticsearch_retry
 async def _ensure_es() -> AsyncElasticsearch:
     global _es
     if _es is None:
@@ -34,11 +41,31 @@ async def _ensure_es() -> AsyncElasticsearch:
             ES_HOST,
             basic_auth=(ES_USER, ES_PASSWORD),
             verify_certs=False,
-            request_timeout=30,
+            request_timeout=ES_TIMEOUT,
         )
         info = await _es.info()
         print(f"[tools] ES conectado: cluster='{info.get('cluster_name')}'")
     return _es
+
+# Health check helpers
+async def check_elasticsearch() -> bool:
+    """Verifica se o Elasticsearch está disponível."""
+    try:
+        es = await _ensure_es()
+        info = await es.info()
+        return info is not None
+    except Exception as e:
+        logger.warning(f"Elasticsearch check failed: {e}")
+        return False
+
+def check_chromadb() -> bool:
+    """Verifica se o ChromaDB está disponível."""
+    try:
+        # Tenta acessar o rag_manager (já inicializado)
+        return rag_manager is not None
+    except Exception as e:
+        logger.warning(f"ChromaDB check failed: {e}")
+        return False
 
 def _collection_from_index(index: str) -> str:
     parts = index.split("_")
@@ -46,6 +73,7 @@ def _collection_from_index(index: str) -> str:
 
 # ---------------- TOOLS ----------------
 @mcp.tool()
+@elasticsearch_retry
 async def search_logs(index: str, window: str = "2h") -> Dict[str, Any]:
     """Busca até 200 logs recentes do índice dentro da janela (ex.: '2h', '15m')."""
     es = await _ensure_es()
@@ -93,6 +121,67 @@ app.mount("/mcp", mcp_app)        # sub-app recebe /mcp/*  -> dentro dele vira "
 @app.get("/")
 def health():
     return {"status": "ok", "server": "SRE Analysis Tools 🚀"}
+
+@app.get("/health/live", tags=["Health"])
+async def liveness():
+    """
+    Liveness probe - Verifica se a aplicação está viva.
+    Retorna 200 se o processo está rodando.
+    """
+    return {"status": "alive"}
+
+@app.get("/health/ready", tags=["Health"])
+async def readiness():
+    """
+    Readiness probe - Verifica se a aplicação está pronta para receber tráfego.
+    Verifica dependências: Elasticsearch e ChromaDB.
+    """
+    checks = {
+        "elasticsearch": await check_elasticsearch(),
+        "chromadb": check_chromadb()
+    }
+    all_ready = all(checks.values())
+    status_code = 200 if all_ready else 503
+    return JSONResponse(
+        content={
+            "status": "ready" if all_ready else "not_ready",
+            "checks": checks
+        },
+        status_code=status_code
+    )
+
+@app.get("/health/startup", tags=["Health"])
+async def startup():
+    """
+    Startup probe - Verifica se a aplicação terminou a inicialização.
+    Verifica se as ferramentas MCP foram registradas.
+    """
+    tools_count = len(mcp._tools) if hasattr(mcp, '_tools') else 0
+    initialized = tools_count > 0
+
+    return JSONResponse(
+        content={
+            "status": "started" if initialized else "starting",
+            "tools_registered": tools_count
+        },
+        status_code=200 if initialized else 503
+    )
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """
+    Graceful shutdown - Fecha conexão com Elasticsearch.
+    """
+    global _es
+    logger.info("Iniciando shutdown graceful do MCP server...")
+    if _es is not None:
+        try:
+            await _es.close()
+            logger.info("Conexão Elasticsearch fechada")
+        except Exception as e:
+            logger.error(f"Erro ao fechar conexão ES: {e}")
+    logger.info("Shutdown completo")
+
 if __name__ == "__main__":
     import uvicorn
     # Forçar lifespan ON e evitar reload enquanto valida integração

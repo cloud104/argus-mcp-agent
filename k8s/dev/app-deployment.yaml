@@ -18,6 +18,7 @@ spec:
         app: argus-app
         component: frontend
     spec:
+      terminationGracePeriodSeconds: 30
       containers:
       - name: app
         image: argus-app:latest
@@ -53,19 +54,27 @@ spec:
           limits:
             memory: "1Gi"
             cpu: "1000m"
+        startupProbe:
+          httpGet:
+            path: /health/startup
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 12
         livenessProbe:
           httpGet:
-            path: /
+            path: /health/live
             port: 8000
-          initialDelaySeconds: 15
+          initialDelaySeconds: 0
           periodSeconds: 10
           timeoutSeconds: 5
           failureThreshold: 3
         readinessProbe:
           httpGet:
-            path: /
+            path: /health/ready
             port: 8000
-          initialDelaySeconds: 10
+          initialDelaySeconds: 0
           periodSeconds: 5
           timeoutSeconds: 3
           failureThreshold: 3

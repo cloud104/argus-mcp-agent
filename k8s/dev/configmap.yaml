@@ -10,6 +10,13 @@ data:
   # Application settings
   PYTHONUNBUFFERED: "1"
   PYTHONDONTWRITEBYTECODE: "1"
+
+  # Timeouts (em segundos)
+  ES_TIMEOUT: "30"
+  API_TIMEOUT_INITIAL: "120"
+  API_TIMEOUT_DEEP_DIVE: "120"
+  API_TIMEOUT_CHAT: "120"
+  API_TIMEOUT_LOG_EXPLAIN: "30"
 ---
 apiVersion: v1
 kind: ConfigMap
