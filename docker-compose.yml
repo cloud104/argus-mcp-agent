@@ -15,7 +15,7 @@ services:
 
   # MCP Tool Server - Depende do ChromaDB (com delay)
   mcp-server:
-    image: southamerica-east1-docker.pkg.dev/tcloud-devops/tcloud-devops/argus-mcp-server:20251002-151836
+    image: southamerica-east1-docker.pkg.dev/tcloud-devops/tcloud-devops/argus-mcp-server:20251002-160242
     container_name: argus-mcp-server
     ports:
       - "${MCP_SERVER_PORT:-8002}:8002"
@@ -37,7 +37,7 @@ services:
 
   # Main Application - Depende do MCP Server
   app:
-    image: southamerica-east1-docker.pkg.dev/tcloud-devops/tcloud-devops/argus-app:20251002-151836
+    image: southamerica-east1-docker.pkg.dev/tcloud-devops/tcloud-devops/argus-app:20251002-160242
     container_name: argus-app
     ports:
       - "${APP_PORT:-8000}:8000"
