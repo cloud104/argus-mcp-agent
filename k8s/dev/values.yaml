@@ -1,0 +1,80 @@
+# Development values for Argus Agent
+# Override default values for development environment
+
+global:
+  namespace: argus-dev
+
+image:
+  registry: docker.io
+  pullPolicy: Always
+  tag: "dev"
+
+mcpServer:
+  replicaCount: 1
+  image:
+    tag: "dev"
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "50m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+
+app:
+  replicaCount: 1
+  image:
+    tag: "dev"
+  service:
+    type: NodePort
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  autoscaling:
+    enabled: false
+
+ingress:
+  app:
+    enabled: true
+    className: "nginx"
+    annotations:
+      nginx.ingress.kubernetes.io/rewrite-target: /
+    hosts:
+      - host: argus-dev.local
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+
+  mcpServer:
+    enabled: true
+    className: "nginx"
+    annotations:
+      nginx.ingress.kubernetes.io/rewrite-target: /
+    hosts:
+      - host: mcp.argus-dev.local
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+
+storage:
+  chroma:
+    enabled: true
+    size: 2Gi
+    storageClassName: "standard"
+
+secrets:
+  # In dev, you can optionally create from values
+  # For production, use existingSecret
+  create: false
+  existingSecret: "argus-secrets"
+
+securityContext:
+  runAsNonRoot: false  # Relaxed for development
+  runAsUser: 1000
+  fsGroup: 1000

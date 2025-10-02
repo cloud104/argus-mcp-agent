@@ -1,0 +1,49 @@
+{{- if .Values.mcpServer.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "argus-agent.fullname" . }}-mcp-server
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "argus-agent.labels" . | nindent 4 }}
+    app: {{ .Values.mcpServer.name }}
+  {{- with .Values.mcpServer.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.mcpServer.service.type }}
+  ports:
+  - port: {{ .Values.mcpServer.service.port }}
+    targetPort: {{ .Values.mcpServer.service.targetPort }}
+    protocol: TCP
+    name: http
+  selector:
+    {{- include "argus-agent.selectorLabels" . | nindent 4 }}
+    app: {{ .Values.mcpServer.name }}
+{{- end }}
+---
+{{- if .Values.app.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "argus-agent.fullname" . }}-app
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "argus-agent.labels" . | nindent 4 }}
+    app: {{ .Values.app.name }}
+  {{- with .Values.app.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.app.service.type }}
+  ports:
+  - port: {{ .Values.app.service.port }}
+    targetPort: {{ .Values.app.service.targetPort }}
+    protocol: TCP
+    name: http
+  selector:
+    {{- include "argus-agent.selectorLabels" . | nindent 4 }}
+    app: {{ .Values.app.name }}
+{{- end }}

@@ -1,0 +1,83 @@
+{{- if .Values.mcpServer.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "argus-agent.fullname" . }}-mcp-server
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "argus-agent.labels" . | nindent 4 }}
+    app: {{ .Values.mcpServer.name }}
+    component: backend
+spec:
+  replicas: {{ .Values.mcpServer.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "argus-agent.selectorLabels" . | nindent 6 }}
+      app: {{ .Values.mcpServer.name }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "argus-agent.selectorLabels" . | nindent 8 }}
+        app: {{ .Values.mcpServer.name }}
+        component: backend
+    spec:
+      {{- with .Values.image.pullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "argus-agent.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
+      containers:
+      - name: mcp-server
+        image: "{{ .Values.image.registry }}/{{ .Values.mcpServer.image.repository }}:{{ .Values.mcpServer.image.tag | default .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        ports:
+        - name: http
+          containerPort: {{ .Values.mcpServer.service.targetPort }}
+          protocol: TCP
+        env:
+        - name: PYTHONUNBUFFERED
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "argus-agent.fullname" . }}-config
+              key: PYTHONUNBUFFERED
+        - name: PYTHONDONTWRITEBYTECODE
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "argus-agent.fullname" . }}-config
+              key: PYTHONDONTWRITEBYTECODE
+        envFrom:
+        - secretRef:
+            name: {{ .Values.secrets.existingSecret | default (printf "%s-secrets" (include "argus-agent.fullname" .)) }}
+        resources:
+          {{- toYaml .Values.mcpServer.resources | nindent 10 }}
+        livenessProbe:
+          {{- toYaml .Values.mcpServer.livenessProbe | nindent 10 }}
+        readinessProbe:
+          {{- toYaml .Values.mcpServer.readinessProbe | nindent 10 }}
+        volumeMounts:
+        - name: chroma-storage
+          mountPath: /app/chroma_db
+      volumes:
+      - name: chroma-storage
+        persistentVolumeClaim:
+          claimName: {{ include "argus-agent.fullname" . }}-chroma-pvc
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

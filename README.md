@@ -30,14 +30,56 @@ Este projeto implementa um agente de IA para análise de logs, construído com u
 
 ## Como Executar
 
-Você precisará de **dois terminais** a correr em simultâneo, ambos dentro da pasta `argus-agent`.
+### Desenvolvimento Local (Sem Containers)
+
+Você precisará de **dois terminais** a correr em simultâneo:
 
 **Terminal 1: Inicie o Servidor de Ferramentas**
 ```bash
-uv run uvicorn tools.server:mcp --port 8002 --reload
+uv run uvicorn tools.server:app --port 8002 --reload
 ```
 
 **Terminal 2: Inicie a Aplicação Principal**
 ```bash
 uv run uvicorn main:app --port 8000 --reload
+```
+
+### Desenvolvimento com Docker
+
+**Usando Docker Compose:**
+```bash
+# Standard
+docker-compose up
+
+# Com ChromaDB standalone
+docker-compose -f docker-compose.chromadb.yml up
+
+# Com debugging
+docker-compose -f docker-compose.dev.yml up
+```
+
+**Usando Tilt (Kubernetes):**
+```bash
+tilt up
+# Acesse a UI em http://localhost:10350
+```
+
+### Produção
+
+Consulte a [documentação completa de deployment](docs/DEPLOYMENT.md).
+
+```bash
+# Deploy com Helm
+helm install argus-prod ./helm/argus-agent \
+  --namespace argus-production \
+  --values k8s/prod/values.yaml
+```
+
+## Documentação
+
+- 📚 [Documentação Completa](docs/README.md)
+- 🐳 [Guia de Containerização](docs/README-CONTAINERIZATION.md)
+- 🚀 [Guia de Deploy](docs/DEPLOYMENT.md)
+- 🏗️ [Arquitetura](app/docs/arquitetura.md)
+- ☸️ [Kubernetes](k8s/README.md)
 

@@ -1,0 +1,19 @@
+{{- if .Values.storage.chroma.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "argus-agent.fullname" . }}-chroma-pvc
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "argus-agent.labels" . | nindent 4 }}
+    component: storage
+spec:
+  accessModes:
+    - {{ .Values.storage.chroma.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.storage.chroma.size }}
+  {{- if .Values.storage.chroma.storageClassName }}
+  storageClassName: {{ .Values.storage.chroma.storageClassName }}
+  {{- end }}
+{{- end }}

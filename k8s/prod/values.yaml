@@ -1,0 +1,122 @@
+# Production values for Argus Agent
+# Override default values for production environment
+
+global:
+  namespace: argus-production
+
+image:
+  registry: docker.io
+  pullPolicy: IfNotPresent
+  tag: "1.0.0"
+
+mcpServer:
+  replicaCount: 2
+  image:
+    tag: "1.0.0"
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "200m"
+    limits:
+      memory: "1Gi"
+      cpu: "1000m"
+
+app:
+  replicaCount: 3
+  image:
+    tag: "1.0.0"
+  service:
+    type: ClusterIP
+  resources:
+    requests:
+      memory: "1Gi"
+      cpu: "500m"
+    limits:
+      memory: "2Gi"
+      cpu: "2000m"
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+ingress:
+  app:
+    enabled: true
+    className: "nginx"
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/rate-limit: "100"
+    hosts:
+      - host: argus.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: argus-app-prod-tls
+        hosts:
+          - argus.example.com
+
+  mcpServer:
+    enabled: true
+    className: "nginx"
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+      # Rate limiting mais restritivo para MCP server
+      nginx.ingress.kubernetes.io/rate-limit: "20"
+      # Autenticação básica recomendada para produção
+      # nginx.ingress.kubernetes.io/auth-type: basic
+      # nginx.ingress.kubernetes.io/auth-secret: mcp-basic-auth
+      # nginx.ingress.kubernetes.io/auth-realm: "MCP Server - Authentication Required"
+    hosts:
+      - host: mcp.argus.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: argus-mcp-prod-tls
+        hosts:
+          - mcp.argus.example.com
+
+storage:
+  chroma:
+    enabled: true
+    size: 20Gi
+    storageClassName: "fast-ssd"
+    accessMode: ReadWriteMany
+
+secrets:
+  create: false
+  existingSecret: "argus-secrets"
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  fsGroup: 65532
+  capabilities:
+    drop:
+      - ALL
+
+# Pod disruption budget for high availability
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+
+# Affinity rules for better distribution
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app
+                operator: In
+                values:
+                  - argus-app
+          topologyKey: kubernetes.io/hostname

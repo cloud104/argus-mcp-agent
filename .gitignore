@@ -42,3 +42,25 @@ ENV/
 # OS
 .DS_Store
 Thumbs.db
+
+# ChromaDB
+chroma_db/
+
+# Kubernetes secrets (NEVER commit these!)
+k8s/*/secret.yaml
+k8s/dev/secret.yaml
+k8s/staging/secret.yaml
+k8s/prod/secret.yaml
+secret.yaml
+**/secret.yaml
+
+# Helm
+helm/*/charts/
+helm/*/.helmignore
+
+# Tilt
+.tiltbuild/
+
+# Logs
+*.log
+logs/

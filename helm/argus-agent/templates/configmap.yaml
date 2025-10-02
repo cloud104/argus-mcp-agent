@@ -1,0 +1,49 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "argus-agent.fullname" . }}-config
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "argus-agent.labels" . | nindent 4 }}
+data:
+  PYTHONUNBUFFERED: "1"
+  PYTHONDONTWRITEBYTECODE: "1"
+  MCP_SERVER_URL: {{ tpl .Values.config.mcpServerUrl . | quote }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "argus-agent.fullname" . }}-settings
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "argus-agent.labels" . | nindent 4 }}
+data:
+  settings.json: |
+    {
+      "mcp_servers": {
+        "tools": {
+          "transport": "streamable_http",
+          "url": {{ tpl .Values.config.mcpServerUrl . | quote }}
+        }
+      }
+    }
+
+  models.json: |
+    {
+      "planner_model": {
+        "provider": {{ .Values.config.models.plannerModel.provider | quote }},
+        "class_path": {{ .Values.config.models.plannerModel.classPath | quote }},
+        "model_name": {{ .Values.config.models.plannerModel.modelName | quote }}
+      },
+      "synthesizer_model": {
+        "provider": {{ .Values.config.models.synthesizerModel.provider | quote }},
+        "class_path": {{ .Values.config.models.synthesizerModel.classPath | quote }},
+        "model_name": {{ .Values.config.models.synthesizerModel.modelName | quote }}
+      },
+      "chat_model": {
+        "provider": {{ .Values.config.models.chatModel.provider | quote }},
+        "class_path": {{ .Values.config.models.chatModel.classPath | quote }},
+        "model_name": {{ .Values.config.models.chatModel.modelName | quote }},
+        "max_tokens": {{ .Values.config.models.chatModel.maxTokens }}
+      }
+    }

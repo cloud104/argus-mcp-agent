@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argus-mcp-server
+  namespace: argus-dev
+  labels:
+    app: argus-mcp-server
+    component: backend
+    environment: development
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: argus-mcp-server
+  template:
+    metadata:
+      labels:
+        app: argus-mcp-server
+        component: backend
+    spec:
+      containers:
+      - name: mcp-server
+        image: argus-mcp-server:latest
+        imagePullPolicy: IfNotPresent
+        command: ["uvicorn", "tools.server:app", "--host", "0.0.0.0", "--port", "8002", "--reload"]
+        ports:
+        - containerPort: 8002
+          name: http
+          protocol: TCP
+        - containerPort: 5678
+          name: debug
+          protocol: TCP
+        env:
+        - name: PYTHONUNBUFFERED
+          valueFrom:
+            configMapKeyRef:
+              name: argus-config
+              key: PYTHONUNBUFFERED
+        - name: PYTHONDONTWRITEBYTECODE
+          valueFrom:
+            configMapKeyRef:
+              name: argus-config
+              key: PYTHONDONTWRITEBYTECODE
+        envFrom:
+        - secretRef:
+            name: argus-secrets
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8002
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8002
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        volumeMounts:
+        - name: chroma-storage
+          mountPath: /app/chroma_db
+      volumes:
+      - name: chroma-storage
+        persistentVolumeClaim:
+          claimName: argus-chroma-pvc

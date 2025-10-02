@@ -1,0 +1,47 @@
+# Ingress for Main App
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: argus-app-ingress
+  namespace: argus-dev
+  labels:
+    app: argus-app
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: argus-dev.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: argus-app
+            port:
+              number: 8000
+---
+# Ingress for MCP Server
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: argus-mcp-server-ingress
+  namespace: argus-dev
+  labels:
+    app: argus-mcp-server
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: mcp.argus-dev.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: argus-mcp-server
+            port:
+              number: 8002

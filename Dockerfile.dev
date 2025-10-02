@@ -1,0 +1,54 @@
+# Dockerfile.dev - Development image with debugging tools
+FROM python:3.13-slim
+
+# Install system dependencies and debugging tools
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    curl \
+    git \
+    vim \
+    net-tools \
+    iputils-ping \
+    procps \
+    htop \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /app
+
+# Install uv for faster package management
+RUN pip install --no-cache-dir uv
+
+# Copy requirements first for better caching
+COPY requirements.txt .
+RUN uv pip install --system -r requirements.txt
+
+# Install development and debugging tools
+RUN uv pip install --system \
+    debugpy \
+    ipdb \
+    pytest \
+    pytest-asyncio \
+    pytest-cov \
+    black \
+    ruff \
+    mypy
+
+# Copy application code
+COPY . .
+
+# Expose ports
+# 8000: Main application
+# 8002: MCP tool server
+# 5678: debugpy remote debugging
+EXPOSE 8000 8002 5678
+
+# Create a non-root user for development
+RUN useradd -m -u 1000 devuser && \
+    chown -R devuser:devuser /app
+
+USER devuser
+
+# Default command (can be overridden in docker-compose)
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

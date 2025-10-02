@@ -1,0 +1,49 @@
+# Alternative docker-compose for development with debugging enabled
+services:
+  mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: argus-mcp-server-debug
+    command: >
+      sh -c "python -m debugpy --listen 0.0.0.0:5678 --wait-for-client -m uvicorn tools.server:app --host 0.0.0.0 --port 8002 --reload"
+    ports:
+      - "8002:8002"
+      - "5679:5678"
+    volumes:
+      - .:/app
+      - ./chroma_db:/app/chroma_db
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+    networks:
+      - argus-network
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: argus-app-debug
+    command: >
+      sh -c "python -m debugpy --listen 0.0.0.0:5678 --wait-for-client -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
+    ports:
+      - "8000:8000"
+      - "5678:5678"
+    volumes:
+      - .:/app
+      - ./chroma_db:/app/chroma_db
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+    networks:
+      - argus-network
+    depends_on:
+      - mcp-server
+
+networks:
+  argus-network:
+    driver: bridge

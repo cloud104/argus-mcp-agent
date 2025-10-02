@@ -1,0 +1,268 @@
+# Default values for argus-agent
+# This is a YAML-formatted file.
+
+# Global settings
+global:
+  namespace: argus-production
+
+# Image configuration
+image:
+  registry: docker.io
+  repository: argus-agent
+  tag: "latest"
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+
+# MCP Server configuration
+mcpServer:
+  enabled: true
+  name: argus-mcp-server
+  replicaCount: 1
+
+  image:
+    repository: argus-mcp-server
+    tag: "latest"
+
+  service:
+    type: ClusterIP
+    port: 8002
+    targetPort: 8002
+    annotations: {}
+
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+  livenessProbe:
+    httpGet:
+      path: /
+      port: 8002
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+  readinessProbe:
+    httpGet:
+      path: /
+      port: 8002
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+# Main Application configuration
+app:
+  enabled: true
+  name: argus-app
+  replicaCount: 2
+
+  image:
+    repository: argus-app
+    tag: "latest"
+
+  service:
+    type: LoadBalancer
+    port: 8000
+    targetPort: 8000
+    annotations: {}
+
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "200m"
+    limits:
+      memory: "1Gi"
+      cpu: "1000m"
+
+  livenessProbe:
+    httpGet:
+      path: /
+      port: 8000
+    initialDelaySeconds: 15
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+  readinessProbe:
+    httpGet:
+      path: /
+      port: 8000
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+  autoscaling:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+
+# Ingress configuration
+ingress:
+  # Main application ingress
+  app:
+    enabled: false
+    className: "nginx"
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    hosts:
+      - host: argus.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: argus-app-tls
+        hosts:
+          - argus.example.com
+
+  # MCP Server ingress (for external tool access)
+  mcpServer:
+    enabled: false
+    className: "nginx"
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+      nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+      # Opcional: autenticação básica
+      # nginx.ingress.kubernetes.io/auth-type: basic
+      # nginx.ingress.kubernetes.io/auth-secret: mcp-basic-auth
+    hosts:
+      - host: mcp.argus.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: argus-mcp-tls
+        hosts:
+          - mcp.argus.example.com
+
+# ChromaDB configuration
+chromadb:
+  enabled: true  # Set to false to use embedded ChromaDB in app pods
+  name: argus-chromadb
+  replicaCount: 1
+
+  image:
+    repository: chromadb/chroma
+    tag: "latest"
+    pullPolicy: IfNotPresent
+
+  service:
+    type: ClusterIP
+    port: 8000
+    annotations: {}
+
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+  livenessProbe:
+    httpGet:
+      path: /api/v1/heartbeat
+      port: 8000
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+  readinessProbe:
+    httpGet:
+      path: /api/v1/heartbeat
+      port: 8000
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+  extraEnv: []
+  # - name: CHROMA_SERVER_AUTH_CREDENTIALS
+  #   value: "admin:password"
+
+# Storage configuration
+storage:
+  chroma:
+    enabled: true
+    size: 10Gi
+    storageClassName: "standard"
+    accessMode: ReadWriteOnce  # Use ReadWriteMany if chromadb.enabled=false (shared PVC)
+
+# Configuration
+config:
+  # MCP Server URL (will be templated)
+  mcpServerUrl: "http://{{ .Release.Name }}-mcp-server:8002/mcp/"
+
+  # ChromaDB URL (if using standalone ChromaDB)
+  # Leave empty to use embedded ChromaDB
+  chromadbUrl: "http://{{ .Release.Name }}-chromadb:8000"
+
+  # Models configuration
+  models:
+    plannerModel:
+      provider: "openai"
+      classPath: "langchain_openai.ChatOpenAI"
+      modelName: "gpt-4o-mini"
+
+    synthesizerModel:
+      provider: "openai"
+      classPath: "langchain_openai.ChatOpenAI"
+      modelName: "gpt-4o"
+
+    chatModel:
+      provider: "openai"
+      classPath: "langchain_openai.ChatOpenAI"
+      modelName: "claude-sonnet-4"
+      maxTokens: 4096
+
+# Secrets (should be provided via values override or external secrets)
+secrets:
+  # Create secret from values (not recommended for production)
+  create: false
+  # Use existing secret
+  existingSecret: "argus-secrets"
+
+  # If create=true, provide these values
+  openaiApiKey: ""
+  googleApiKey: ""
+  anthropicApiKey: ""
+
+  elasticsearch:
+    host: ""
+    user: ""
+    password: ""
+
+# Security context
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  fsGroup: 65532
+  capabilities:
+    drop:
+      - ALL
+
+# Pod annotations
+podAnnotations: {}
+
+# Node selector
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Affinity
+affinity: {}
+
+# Service Account
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""

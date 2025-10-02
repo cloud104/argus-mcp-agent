@@ -1,0 +1,94 @@
+{{- if .Values.chromadb.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "argus-agent.fullname" . }}-chromadb
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "argus-agent.labels" . | nindent 4 }}
+    app: {{ .Values.chromadb.name }}
+    component: database
+spec:
+  replicas: {{ .Values.chromadb.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "argus-agent.selectorLabels" . | nindent 6 }}
+      app: {{ .Values.chromadb.name }}
+  template:
+    metadata:
+      annotations:
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "argus-agent.selectorLabels" . | nindent 8 }}
+        app: {{ .Values.chromadb.name }}
+        component: database
+    spec:
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
+      containers:
+      - name: chromadb
+        image: "{{ .Values.chromadb.image.repository }}:{{ .Values.chromadb.image.tag }}"
+        imagePullPolicy: {{ .Values.chromadb.image.pullPolicy }}
+        ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+        env:
+        - name: IS_PERSISTENT
+          value: "TRUE"
+        - name: ANONYMIZED_TELEMETRY
+          value: "FALSE"
+        {{- with .Values.chromadb.extraEnv }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        resources:
+          {{- toYaml .Values.chromadb.resources | nindent 10 }}
+        livenessProbe:
+          {{- toYaml .Values.chromadb.livenessProbe | nindent 10 }}
+        readinessProbe:
+          {{- toYaml .Values.chromadb.readinessProbe | nindent 10 }}
+        volumeMounts:
+        - name: chroma-storage
+          mountPath: /chroma/chroma
+      volumes:
+      - name: chroma-storage
+        persistentVolumeClaim:
+          claimName: {{ include "argus-agent.fullname" . }}-chroma-pvc
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "argus-agent.fullname" . }}-chromadb
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "argus-agent.labels" . | nindent 4 }}
+    app: {{ .Values.chromadb.name }}
+  {{- with .Values.chromadb.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.chromadb.service.type }}
+  ports:
+  - port: {{ .Values.chromadb.service.port }}
+    targetPort: 8000
+    protocol: TCP
+    name: http
+  selector:
+    {{- include "argus-agent.selectorLabels" . | nindent 4 }}
+    app: {{ .Values.chromadb.name }}
+{{- end }}

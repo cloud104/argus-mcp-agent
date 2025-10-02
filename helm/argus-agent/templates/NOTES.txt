@@ -1,0 +1,39 @@
+🚀 Argus Agent has been deployed!
+
+1. Get the application URL:
+{{- if .Values.ingress.enabled }}
+{{- range $host := .Values.ingress.hosts }}
+  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ $host.host }}
+{{- end }}
+{{- else if contains "LoadBalancer" .Values.app.service.type }}
+  NOTE: It may take a few minutes for the LoadBalancer IP to be available.
+  You can watch the status by running:
+
+  kubectl get svc --namespace {{ .Values.global.namespace }} -w {{ include "argus-agent.fullname" . }}-app
+
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Values.global.namespace }} {{ include "argus-agent.fullname" . }}-app -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+  echo "Argus Agent URL: http://$SERVICE_IP:{{ .Values.app.service.port }}"
+{{- else }}
+  export POD_NAME=$(kubectl get pods --namespace {{ .Values.global.namespace }} -l "app.kubernetes.io/name={{ include "argus-agent.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
+  echo "Visit http://127.0.0.1:8000 to use Argus Agent"
+  kubectl port-forward --namespace {{ .Values.global.namespace }} $POD_NAME 8000:8000
+{{- end }}
+
+2. Check the status of the pods:
+  kubectl get pods --namespace {{ .Values.global.namespace }} -l "app.kubernetes.io/instance={{ .Release.Name }}"
+
+3. View logs:
+  # Main application
+  kubectl logs --namespace {{ .Values.global.namespace }} -l "app={{ .Values.app.name }}" --tail=100 -f
+
+  # MCP Server
+  kubectl logs --namespace {{ .Values.global.namespace }} -l "app={{ .Values.mcpServer.name }}" --tail=100 -f
+
+4. Access the services:
+  # Main App
+  kubectl port-forward --namespace {{ .Values.global.namespace }} svc/{{ include "argus-agent.fullname" . }}-app 8000:8000
+
+  # MCP Server
+  kubectl port-forward --namespace {{ .Values.global.namespace }} svc/{{ include "argus-agent.fullname" . }}-mcp-server 8002:8002
+
+📚 Documentation: https://github.com/your-org/argus-mcp-agent

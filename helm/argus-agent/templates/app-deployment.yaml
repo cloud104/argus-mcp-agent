@@ -1,0 +1,94 @@
+{{- if .Values.app.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "argus-agent.fullname" . }}-app
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "argus-agent.labels" . | nindent 4 }}
+    app: {{ .Values.app.name }}
+    component: frontend
+spec:
+  replicas: {{ .Values.app.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "argus-agent.selectorLabels" . | nindent 6 }}
+      app: {{ .Values.app.name }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "argus-agent.selectorLabels" . | nindent 8 }}
+        app: {{ .Values.app.name }}
+        component: frontend
+    spec:
+      {{- with .Values.image.pullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "argus-agent.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
+      containers:
+      - name: app
+        image: "{{ .Values.image.registry }}/{{ .Values.app.image.repository }}:{{ .Values.app.image.tag | default .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        ports:
+        - name: http
+          containerPort: {{ .Values.app.service.targetPort }}
+          protocol: TCP
+        env:
+        - name: PYTHONUNBUFFERED
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "argus-agent.fullname" . }}-config
+              key: PYTHONUNBUFFERED
+        - name: PYTHONDONTWRITEBYTECODE
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "argus-agent.fullname" . }}-config
+              key: PYTHONDONTWRITEBYTECODE
+        envFrom:
+        - secretRef:
+            name: {{ .Values.secrets.existingSecret | default (printf "%s-secrets" (include "argus-agent.fullname" .)) }}
+        resources:
+          {{- toYaml .Values.app.resources | nindent 10 }}
+        livenessProbe:
+          {{- toYaml .Values.app.livenessProbe | nindent 10 }}
+        readinessProbe:
+          {{- toYaml .Values.app.readinessProbe | nindent 10 }}
+        volumeMounts:
+        - name: config-volume
+          mountPath: /app/config
+          readOnly: true
+        - name: chroma-storage
+          mountPath: /app/chroma_db
+      volumes:
+      - name: config-volume
+        configMap:
+          name: {{ include "argus-agent.fullname" . }}-settings
+          items:
+          - key: settings.json
+            path: settings.json
+          - key: models.json
+            path: models.json
+      - name: chroma-storage
+        persistentVolumeClaim:
+          claimName: {{ include "argus-agent.fullname" . }}-chroma-pvc
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

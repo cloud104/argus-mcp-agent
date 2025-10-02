@@ -1,0 +1,85 @@
+services:
+  # MCP Tool Server
+  mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: argus-mcp-server
+    command: uvicorn tools.server:app --host 0.0.0.0 --port 8002 --reload
+    ports:
+      - "8002:8002"
+      - "5679:5678"  # debugpy port for MCP server
+    volumes:
+      - .:/app
+      - ./chroma_db:/app/chroma_db
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+    networks:
+      - argus-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Main Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: argus-app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+      - "5678:5678"  # debugpy port for main app
+    volumes:
+      - .:/app
+      - ./chroma_db:/app/chroma_db
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+    networks:
+      - argus-network
+    depends_on:
+      mcp-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ChromaDB standalone server (recommended for production-like setup)
+  # Uncomment to use ChromaDB as a separate service instead of embedded
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: argus-chromadb
+    ports:
+      - "8001:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ANONYMIZED_TELEMETRY=FALSE
+    networks:
+      - argus-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+networks:
+  argus-network:
+    driver: bridge
+
+volumes:
+  chroma_data:

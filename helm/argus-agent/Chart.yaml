@@ -1,0 +1,16 @@
+apiVersion: v2
+name: argus-agent
+description: AI-powered SRE assistant for TOTVS Protheus environment analysis
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - sre
+  - ai
+  - log-analysis
+  - observability
+maintainers:
+  - name: Argus Team
+home: https://github.com/your-org/argus-mcp-agent
+sources:
+  - https://github.com/your-org/argus-mcp-agent

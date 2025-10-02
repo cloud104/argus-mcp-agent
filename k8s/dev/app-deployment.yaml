@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argus-app
+  namespace: argus-dev
+  labels:
+    app: argus-app
+    component: frontend
+    environment: development
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: argus-app
+  template:
+    metadata:
+      labels:
+        app: argus-app
+        component: frontend
+    spec:
+      containers:
+      - name: app
+        image: argus-app:latest
+        imagePullPolicy: IfNotPresent
+        command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+        ports:
+        - containerPort: 8000
+          name: http
+          protocol: TCP
+        - containerPort: 5678
+          name: debug
+          protocol: TCP
+        env:
+        - name: PYTHONUNBUFFERED
+          valueFrom:
+            configMapKeyRef:
+              name: argus-config
+              key: PYTHONUNBUFFERED
+        - name: PYTHONDONTWRITEBYTECODE
+          valueFrom:
+            configMapKeyRef:
+              name: argus-config
+              key: PYTHONDONTWRITEBYTECODE
+        envFrom:
+        - secretRef:
+            name: argus-secrets
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "200m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8000
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        volumeMounts:
+        - name: config-volume
+          mountPath: /app/config
+          readOnly: true
+        - name: chroma-storage
+          mountPath: /app/chroma_db
+      volumes:
+      - name: config-volume
+        configMap:
+          name: argus-settings
+          items:
+          - key: settings.json
+            path: settings.json
+          - key: models.json
+            path: models.json
+      - name: chroma-storage
+        persistentVolumeClaim:
+          claimName: argus-chroma-pvc

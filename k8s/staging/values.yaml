@@ -1,0 +1,94 @@
+# Staging values for Argus Agent
+# Override default values for staging environment
+
+global:
+  namespace: argus-staging
+
+image:
+  registry: docker.io
+  pullPolicy: IfNotPresent
+  tag: "staging"
+
+mcpServer:
+  replicaCount: 1
+  image:
+    tag: "staging"
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+app:
+  replicaCount: 2
+  image:
+    tag: "staging"
+  service:
+    type: ClusterIP
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "200m"
+    limits:
+      memory: "1Gi"
+      cpu: "1000m"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+
+ingress:
+  app:
+    enabled: true
+    className: "nginx"
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-staging"
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    hosts:
+      - host: argus-staging.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: argus-app-staging-tls
+        hosts:
+          - argus-staging.example.com
+
+  mcpServer:
+    enabled: true
+    className: "nginx"
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-staging"
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      # Rate limiting para proteger o MCP server
+      nginx.ingress.kubernetes.io/rate-limit: "10"
+    hosts:
+      - host: mcp-staging.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: argus-mcp-staging-tls
+        hosts:
+          - mcp-staging.example.com
+
+storage:
+  chroma:
+    enabled: true
+    size: 5Gi
+    storageClassName: "standard"
+
+secrets:
+  create: false
+  existingSecret: "argus-secrets"
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  fsGroup: 65532
+  capabilities:
+    drop:
+      - ALL
