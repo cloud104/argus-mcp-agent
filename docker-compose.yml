@@ -1,7 +1,21 @@
 services:
-  # MCP Tool Server
+  # ChromaDB - Deve iniciar primeiro
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: argus-chromadb
+    ports:
+      - "8001:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ANONYMIZED_TELEMETRY=FALSE
+    networks:
+      - argus-network
+
+  # MCP Tool Server - Depende do ChromaDB (com delay)
   mcp-server:
-    image: southamerica-east1-docker.pkg.dev/tcloud-devops/tcloud-devops/argus-mcp-server:20251002-150332
+    image: southamerica-east1-docker.pkg.dev/tcloud-devops/tcloud-devops/argus-mcp-server:20251002-151836
     container_name: argus-mcp-server
     ports:
       - "8002:8002"
@@ -11,14 +25,17 @@ services:
       - PYTHONUNBUFFERED=1
     networks:
       - argus-network
+    depends_on:
+      chromadb:
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8002/ || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 10s
+      start_period: 15s
 
-  # Main Application
+  # Main Application - Depende do MCP Server
   app:
     image: southamerica-east1-docker.pkg.dev/tcloud-devops/tcloud-devops/argus-app:20251002-150332
     container_name: argus-app
@@ -40,27 +57,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 15s
-
-  # ChromaDB standalone server (recommended for production-like setup)
-  # Uncomment to use ChromaDB as a separate service instead of embedded
-  chromadb:
-    image: chromadb/chroma:latest
-    container_name: argus-chromadb
-    ports:
-      - "8001:8000"
-    volumes:
-      - chroma_data:/chroma/chroma
-    environment:
-      - IS_PERSISTENT=TRUE
-      - ANONYMIZED_TELEMETRY=FALSE
-    networks:
-      - argus-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
 
 networks:
   argus-network:
