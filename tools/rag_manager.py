@@ -16,10 +16,10 @@ class ChromaRAGManager(RAGManager):
     """Implementação concreta do gestor de RAG usando ChromaDB persistente."""
     def __init__(self, path: str = "./chroma_db"):
         self.client = chromadb.PersistentClient(path=path)
-        self.embedding_function = embedding_functions.SentenceTransformerEmbeddingFunction(
-            model_name="all-MiniLM-L6-v2"
-        )
-        print("INFO: (RAG) Cliente ChromaDB persistente inicializado.")
+        # Usa DefaultEmbeddingFunction (leve, sem modelos ML pesados)
+        # Para produção, considere usar OpenAI/HuggingFace API embeddings
+        self.embedding_function = embedding_functions.DefaultEmbeddingFunction()
+        print("INFO: (RAG) Cliente ChromaDB persistente inicializado com DefaultEmbeddingFunction.")
 
     def _get_collection(self, collection_name: str):
         return self.client.get_or_create_collection(

@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y \
 # Install uv for faster package management
 RUN pip install --no-cache-dir uv
 
-# Copy requirements and install dependencies
+# Copy requirements and install dependencies (only what app needs)
 COPY requirements-app.txt .
 RUN uv pip install --system --no-cache-dir -r requirements-app.txt
 
@@ -26,8 +26,13 @@ COPY app/ ./app/
 COPY prompts/ ./prompts/
 COPY config/ ./config/
 
-# Stage 2: Production image with distroless
-FROM gcr.io/distroless/python3-debian12
+# Stage 2: Production image with Python slim (not distroless due to binary dependencies)
+FROM python:3.13-slim
+
+# Install runtime dependencies (curl for healthcheck)
+RUN apt-get update && apt-get install -y \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy Python packages from builder
 COPY --from=builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
@@ -45,11 +50,12 @@ COPY --from=builder /app/app ./app
 COPY --from=builder /app/prompts ./prompts
 COPY --from=builder /app/config ./config
 
-# Run as non-root user (distroless default is nonroot uid 65532)
-USER nonroot:nonroot
+# Create non-root user
+RUN useradd -m -u 65532 -s /bin/bash nonroot && chown -R nonroot:nonroot /app
+USER nonroot
 
 # Expose port
 EXPOSE 8000
 
 # Start the main application
-CMD ["/usr/local/bin/uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
