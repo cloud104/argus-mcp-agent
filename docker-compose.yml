@@ -1,7 +1,7 @@
 services:
   # MCP Tool Server
   mcp-server:
-    image: southamerica-east1-docker.pkg.dev/tcloud-devops/tcloud-devops/argus-mcp-server:20251002-144000
+    image: southamerica-east1-docker.pkg.dev/tcloud-devops/tcloud-devops/argus-mcp-server:20251002-143959
     container_name: argus-mcp-server
     ports:
       - "8002:8002"
@@ -20,7 +20,7 @@ services:
 
   # Main Application
   app:
-    image: southamerica-east1-docker.pkg.dev/tcloud-devops/tcloud-devops/argus-app:20251002-144000
+    image: southamerica-east1-docker.pkg.dev/tcloud-devops/tcloud-devops/argus-app:20251002-143959
     container_name: argus-app
     ports:
       - "8000:8000"
