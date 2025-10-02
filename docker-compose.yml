@@ -37,7 +37,7 @@ services:
 
   # Main Application - Depende do MCP Server
   app:
-    image: southamerica-east1-docker.pkg.dev/tcloud-devops/tcloud-devops/argus-app:20251002-150332
+    image: southamerica-east1-docker.pkg.dev/tcloud-devops/tcloud-devops/argus-app:20251002-151836
     container_name: argus-app
     ports:
       - "8000:8000"
