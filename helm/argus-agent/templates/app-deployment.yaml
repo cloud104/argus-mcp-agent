@@ -52,6 +52,8 @@ spec:
             configMapKeyRef:
               name: {{ include "argus-agent.fullname" . }}-config
               key: PYTHONDONTWRITEBYTECODE
+        - name: MCP_SERVER_URL
+          value: "http://{{ include "argus-agent.fullname" . }}-mcp-server:{{ .Values.mcpServer.service.port }}/mcp/"
         envFrom:
         - secretRef:
             name: {{ .Values.secrets.existingSecret | default (printf "%s-secrets" (include "argus-agent.fullname" .)) }}

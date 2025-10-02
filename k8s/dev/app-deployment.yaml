@@ -41,6 +41,8 @@ spec:
             configMapKeyRef:
               name: argus-config
               key: PYTHONDONTWRITEBYTECODE
+        - name: MCP_SERVER_URL
+          value: "http://argus-mcp-server:8002/mcp/"
         envFrom:
         - secretRef:
             name: argus-secrets
