@@ -1,26 +1,18 @@
 services:
   # MCP Tool Server
   mcp-server:
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
+    image: southamerica-east1-docker.pkg.dev/tcloud-devops/tcloud-devops/argus-mcp-server:latest
     container_name: argus-mcp-server
-    command: uvicorn tools.server:app --host 0.0.0.0 --port 8002 --reload
     ports:
       - "8002:8002"
-      - "5679:5678"  # debugpy port for MCP server
-    volumes:
-      - .:/app
-      - ./chroma_db:/app/chroma_db
     env_file:
       - .env
     environment:
       - PYTHONUNBUFFERED=1
-      - PYTHONDONTWRITEBYTECODE=1
     networks:
       - argus-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8002/"]
+      test: ["CMD-SHELL", "curl -f http://localhost:8002/ || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -28,29 +20,21 @@ services:
 
   # Main Application
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
+    image: southamerica-east1-docker.pkg.dev/tcloud-devops/tcloud-devops/argus-app:latest
     container_name: argus-app
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
     ports:
       - "8000:8000"
-      - "5678:5678"  # debugpy port for main app
-    volumes:
-      - .:/app
-      - ./chroma_db:/app/chroma_db
     env_file:
       - .env
     environment:
       - PYTHONUNBUFFERED=1
-      - PYTHONDONTWRITEBYTECODE=1
     networks:
       - argus-network
     depends_on:
       mcp-server:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/ || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5

@@ -14,6 +14,7 @@ Complete documentation for the Argus Agent project.
 - [Deployment Guide](DEPLOYMENT.md) - Complete deployment instructions for all environments
 - [Containerization Guide](README-CONTAINERIZATION.md) - Docker and Kubernetes implementation details
 - [Containerization Summary](CONTAINERIZATION-SUMMARY.md) - Quick reference for containerization setup
+- **[Build Local](BUILD-LOCAL.md)** - Como construir e publicar imagens localmente no GCP Artifact Registry
 - [Kubernetes README](../k8s/README.md) - Kubernetes-specific documentation
 - **[MCP External Access](MCP-EXTERNAL-ACCESS.md)** - Expor MCP Server externamente via Ingress
 

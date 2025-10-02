@@ -3,9 +3,9 @@
 .PHONY: help build dev prod test clean docker-build docker-push k8s-deploy helm-install
 
 # Variables
-DOCKER_REGISTRY ?= docker.io
-DOCKER_USERNAME ?= your-username
-IMAGE_NAME ?= argus-agent
+DOCKER_REGISTRY ?= southamerica-east1-docker.pkg.dev/tcloud-devops/tcloud-devops
+APP_IMAGE ?= argus-app
+MCP_IMAGE ?= argus-mcp-server
 VERSION ?= latest
 
 help: ## Show this help message
@@ -30,17 +30,37 @@ dev-down: ## Stop development environment
 dev-logs: ## View development logs
 	docker-compose logs -f
 
-# Production Docker
-docker-build: ## Build production Docker images
-	docker build -t $(DOCKER_REGISTRY)/$(DOCKER_USERNAME)/$(IMAGE_NAME):$(VERSION) .
-	docker build -f Dockerfile.dev -t $(DOCKER_REGISTRY)/$(DOCKER_USERNAME)/argus-mcp-server:$(VERSION) .
+# Production Docker - Build and Push locally
+docker-login: ## Login to GCP Artifact Registry
+	gcloud auth configure-docker southamerica-east1-docker.pkg.dev
 
-docker-push: ## Push Docker images to registry
-	docker push $(DOCKER_REGISTRY)/$(DOCKER_USERNAME)/$(IMAGE_NAME):$(VERSION)
-	docker push $(DOCKER_REGISTRY)/$(DOCKER_USERNAME)/argus-mcp-server:$(VERSION)
+docker-build: ## Build production Docker images (app + mcp-server)
+	@echo "Building App image..."
+	docker build --target app -t $(DOCKER_REGISTRY)/$(APP_IMAGE):$(VERSION) .
+	@echo "Building MCP Server image..."
+	docker build --target mcp-server -t $(DOCKER_REGISTRY)/$(MCP_IMAGE):$(VERSION) .
+	@echo "✅ Images built successfully!"
 
-docker-scan: ## Scan Docker image for vulnerabilities
-	docker scan $(DOCKER_REGISTRY)/$(DOCKER_USERNAME)/$(IMAGE_NAME):$(VERSION)
+docker-build-dev: ## Build development Docker images
+	docker build -f Dockerfile.dev -t argus-app:dev .
+	docker build -f Dockerfile.dev -t argus-mcp-server:dev .
+
+docker-push: ## Push Docker images to GCP Artifact Registry
+	@echo "Pushing App image..."
+	docker push $(DOCKER_REGISTRY)/$(APP_IMAGE):$(VERSION)
+	@echo "Pushing MCP Server image..."
+	docker push $(DOCKER_REGISTRY)/$(MCP_IMAGE):$(VERSION)
+	@echo "✅ Images pushed successfully!"
+
+docker-build-push: docker-build docker-push ## Build and push images in one command
+
+docker-tag: ## Tag images with custom version (usage: make docker-tag VERSION=v1.0.0)
+	docker tag $(DOCKER_REGISTRY)/$(APP_IMAGE):latest $(DOCKER_REGISTRY)/$(APP_IMAGE):$(VERSION)
+	docker tag $(DOCKER_REGISTRY)/$(MCP_IMAGE):latest $(DOCKER_REGISTRY)/$(MCP_IMAGE):$(VERSION)
+
+docker-pull: ## Pull images from registry
+	docker pull $(DOCKER_REGISTRY)/$(APP_IMAGE):$(VERSION)
+	docker pull $(DOCKER_REGISTRY)/$(MCP_IMAGE):$(VERSION)
 
 # Kubernetes - Development
 k8s-dev-deploy: ## Deploy to Kubernetes development environment
