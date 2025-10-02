@@ -96,4 +96,4 @@ def health():
 if __name__ == "__main__":
     import uvicorn
     # Forçar lifespan ON e evitar reload enquanto valida integração
-    uvicorn.run("tools.server:app", host="127.0.0.1", port=9001, reload=False, lifespan="on")
+    uvicorn.run("tools.server:app", host="0.0.0.0", port=8002, reload=False, lifespan="on")
