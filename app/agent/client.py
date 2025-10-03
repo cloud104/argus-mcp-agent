@@ -39,6 +39,14 @@ def get_mcp_client() -> MultiServerMCPClient:
                 print(f"INFO: (MCPClient) URL sobrescrita via MCP_SERVER_URL: {mcp_url_override}")
                 server_config["tools"]["url"] = mcp_url_override
 
+            # Adiciona service token para autenticação interna
+            service_token = os.getenv("MCP_SERVICE_TOKEN")
+            if service_token:
+                if "headers" not in server_config["tools"]:
+                    server_config["tools"]["headers"] = {}
+                server_config["tools"]["headers"]["Authorization"] = f"Bearer {service_token}"
+                print("INFO: (MCPClient) Service token configurado para autenticação")
+
             print(f"INFO: (MCPClient) A inicializar cliente com a configuração: {server_config}")
             _MCP_CLIENT = MultiServerMCPClient(server_config)
 
@@ -51,6 +59,12 @@ def get_mcp_client() -> MultiServerMCPClient:
                     "url": os.getenv("MCP_SERVER_URL", "http://127.0.0.1:8002/mcp/"),
                 }
             }
+            # Adiciona service token ao fallback também
+            service_token = os.getenv("MCP_SERVICE_TOKEN")
+            if service_token:
+                default_config["tools"]["headers"] = {
+                    "Authorization": f"Bearer {service_token}"
+                }
             _MCP_CLIENT = MultiServerMCPClient(default_config)
 
     return _MCP_CLIENT

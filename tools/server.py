@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
 import logging
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, HTTPException, status
 from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 from elasticsearch import AsyncElasticsearch
@@ -14,6 +14,7 @@ from sklearn.ensemble import IsolationForest
 from fastmcp import FastMCP
 from tools.rag_manager import get_rag_manager
 from tools.resilience import elasticsearch_retry
+from tools.auth import validate_access_token
 
 load_dotenv()
 
@@ -116,6 +117,56 @@ def detect_timeseries_anomalies(data: List[Dict[str, Any]], contamination: float
 
 mcp_app = mcp.http_app(path="/")  # <<=== IMPORTANTE: path="/" dentro do sub-app
 app = FastAPI(title="Tool Server (MCP HTTP)", lifespan=mcp_app.lifespan)
+
+
+# Authentication middleware for MCP endpoints
+@app.middleware("http")
+async def auth_middleware(request: Request, call_next):
+    """
+    Authentication middleware for MCP server.
+    Validates JWT token or service token for all /mcp/* endpoints except health checks.
+    """
+    # Allow health check endpoints without authentication
+    if request.url.path.startswith("/health/"):
+        return await call_next(request)
+
+    # Allow root endpoint without authentication
+    if request.url.path == "/":
+        return await call_next(request)
+
+    # Require authentication for /mcp/* endpoints
+    if request.url.path.startswith("/mcp/"):
+        authorization = request.headers.get("Authorization")
+
+        # Check for service token first (for internal service-to-service communication)
+        service_token = os.getenv("MCP_SERVICE_TOKEN")
+        if service_token and authorization == f"Bearer {service_token}":
+            # Service token authenticated - add system user
+            request.state.user = {
+                "username": "system",
+                "role": "admin",
+            }
+            return await call_next(request)
+
+        # Otherwise, validate JWT token
+        payload = validate_access_token(authorization)
+
+        if payload is None:
+            return JSONResponse(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                content={"detail": "Invalid or missing authentication token"},
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        # Add user info to request state for potential use in tools
+        request.state.user = {
+            "username": payload.get("sub"),
+            "role": payload.get("role"),
+        }
+
+    return await call_next(request)
+
+
 app.mount("/mcp", mcp_app)        # sub-app recebe /mcp/*  -> dentro dele vira "/"
 
 @app.get("/")
