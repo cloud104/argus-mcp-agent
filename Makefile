@@ -81,6 +81,40 @@ docker-push-timestamp: ## Push images with timestamp tag
 
 docker-build-push-timestamp: docker-build-timestamp docker-push-timestamp ## Build and push with timestamp in one command
 
+docker-build-dual: ## Build with both latest and timestamp tags
+	@echo "🔨 Building with tags: latest and $(TIMESTAMP)"
+	docker build -f Dockerfile.app \
+		-t $(DOCKER_REGISTRY)/$(APP_IMAGE):latest \
+		-t $(DOCKER_REGISTRY)/$(APP_IMAGE):$(TIMESTAMP) .
+	docker build -f Dockerfile.mcp \
+		-t $(DOCKER_REGISTRY)/$(MCP_IMAGE):latest \
+		-t $(DOCKER_REGISTRY)/$(MCP_IMAGE):$(TIMESTAMP) .
+	@echo "✅ Images built with dual tags!"
+	@echo ""
+	@echo "Images created:"
+	@echo "  - $(DOCKER_REGISTRY)/$(APP_IMAGE):latest"
+	@echo "  - $(DOCKER_REGISTRY)/$(APP_IMAGE):$(TIMESTAMP)"
+	@echo "  - $(DOCKER_REGISTRY)/$(MCP_IMAGE):latest"
+	@echo "  - $(DOCKER_REGISTRY)/$(MCP_IMAGE):$(TIMESTAMP)"
+
+docker-push-dual: ## Push both latest and timestamp tags
+	@echo "📤 Pushing images with dual tags..."
+	docker push $(DOCKER_REGISTRY)/$(APP_IMAGE):latest
+	docker push $(DOCKER_REGISTRY)/$(APP_IMAGE):$(TIMESTAMP)
+	docker push $(DOCKER_REGISTRY)/$(MCP_IMAGE):latest
+	docker push $(DOCKER_REGISTRY)/$(MCP_IMAGE):$(TIMESTAMP)
+	@echo "✅ All images pushed successfully!"
+
+docker-release: docker-login docker-build-dual docker-push-dual ## Complete release: login + build + push (latest + timestamp)
+	@echo ""
+	@echo "🎉 Release complete!"
+	@echo ""
+	@echo "Images available at:"
+	@echo "  - $(DOCKER_REGISTRY)/$(APP_IMAGE):latest"
+	@echo "  - $(DOCKER_REGISTRY)/$(APP_IMAGE):$(TIMESTAMP)"
+	@echo "  - $(DOCKER_REGISTRY)/$(MCP_IMAGE):latest"
+	@echo "  - $(DOCKER_REGISTRY)/$(MCP_IMAGE):$(TIMESTAMP)"
+
 docker-tag: ## Tag images with custom version (usage: make docker-tag VERSION=v1.0.0)
 	docker tag $(DOCKER_REGISTRY)/$(APP_IMAGE):latest $(DOCKER_REGISTRY)/$(APP_IMAGE):$(VERSION)
 	docker tag $(DOCKER_REGISTRY)/$(MCP_IMAGE):latest $(DOCKER_REGISTRY)/$(MCP_IMAGE):$(VERSION)
