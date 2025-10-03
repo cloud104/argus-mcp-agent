@@ -28,3 +28,6 @@ numpy==2.3.3
 
 # Utilities
 typing-extensions==4.15.0
+
+# Authentication (JWT validation)
+python-jose[cryptography]==3.3.0

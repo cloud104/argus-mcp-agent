@@ -123,8 +123,11 @@ overrides==7.7.0
 packaging==25.0
 pandas==2.3.2
 parse==1.20.2
+passlib==1.7.4
 pathable==0.4.4
 pillow==11.3.0
+psycopg2-binary==2.9.10
+asyncpg==0.30.0
 pip==25.1.1
 posthog==5.4.0
 propcache==0.3.2
@@ -143,6 +146,7 @@ pypika==0.48.9
 pyproject-hooks==1.2.0
 python-dateutil==2.9.0.post0
 python-dotenv==1.1.1
+python-jose[cryptography]==3.3.0
 python-multipart==0.0.20
 pytz==2025.2
 pyyaml==6.0.2
