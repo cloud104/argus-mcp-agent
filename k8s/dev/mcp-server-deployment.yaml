@@ -19,10 +19,12 @@ spec:
         component: backend
     spec:
       terminationGracePeriodSeconds: 30
+      imagePullSecrets:
+      - name: gcr-json-key
       containers:
       - name: mcp-server
-        image: argus-mcp-server:latest
-        imagePullPolicy: IfNotPresent
+        image: southamerica-east1-docker.pkg.dev/tcloud-devops/tcloud-devops/argus-mcp-server:latest
+        imagePullPolicy: Always
         command: ["uvicorn", "tools.server:app", "--host", "0.0.0.0", "--port", "8002", "--reload"]
         ports:
         - containerPort: 8002
