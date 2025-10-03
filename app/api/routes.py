@@ -1,11 +1,14 @@
 import asyncio
 import logging
 import os
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from typing import List, TypedDict, Optional, Dict, Any, Literal
 
 from app.agent.workflow import run_initial_analysis, run_deep_dive_analysis, run_log_explanation, run_chat_turn
+from app.auth.dependencies import get_current_user
+from app.auth.models import User
+
 router = APIRouter()
 
 # Carrega timeouts das variáveis de ambiente
@@ -37,7 +40,10 @@ class ExplainLogRequest(BaseModel):
     log_line: str
 
 @router.post("/initial-analysis", tags=["Analysis"])
-async def initial_analysis(request: AnalysisRequest):
+async def initial_analysis(
+    request: AnalysisRequest,
+    current_user: User = Depends(get_current_user)
+):
     try:
         tool_params = {"index": request.index, "window": request.window}
         result = await asyncio.wait_for(
@@ -55,7 +61,10 @@ async def initial_analysis(request: AnalysisRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/deep-dive", tags=["Analysis"])
-async def deep_dive_analysis(request: DeepDiveRequest):
+async def deep_dive_analysis(
+    request: DeepDiveRequest,
+    current_user: User = Depends(get_current_user)
+):
     try:
         result = await asyncio.wait_for(
             run_deep_dive_analysis(request.msg, request.session_id, request.tool_params),
@@ -72,7 +81,10 @@ async def deep_dive_analysis(request: DeepDiveRequest):
         raise HTTPException(status_code=500, detail=f"Ocorreu um erro interno na análise profunda: {e}")
 
 @router.post("/explain-log-line", tags=["Analysis"])
-async def explain_log(request: ExplainLogRequest):
+async def explain_log(
+    request: ExplainLogRequest,
+    current_user: User = Depends(get_current_user)
+):
     logging.info(f"Recebida solicitação para /explain-log-line com log_line: {request.log_line}")
     if not request.log_line:
         raise HTTPException(status_code=400, detail="A linha de log não pode estar vazia.")
@@ -90,7 +102,10 @@ async def explain_log(request: ExplainLogRequest):
 
 
 @router.post("/chat", tags=["Analysis"])
-async def chat(request: ChatRequest):
+async def chat(
+    request: ChatRequest,
+    current_user: User = Depends(get_current_user)
+):
     try:
         result = await asyncio.wait_for(
             run_chat_turn(request.user_input, request.session_id, request.initial_context),

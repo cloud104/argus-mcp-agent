@@ -11,11 +11,16 @@ load_dotenv()
 
 # Importa o router do ficheiro de rotas
 from app.api import routes
+from app.auth import routes as auth_routes
+from app.auth.database import init_db
 
 # Cria a instância da aplicação
 app = FastAPI(title="SRE Agent com LangGraph e MCP")
 
-# Inclui as rotas definidas no outro ficheiro
+# Inclui as rotas de autenticação
+app.include_router(auth_routes.router)
+
+# Inclui as rotas da API principal
 app.include_router(routes.router)
 
 # Serve o frontend
@@ -93,9 +98,18 @@ async def startup():
 @app.on_event("startup")
 async def startup_event():
     """
-    Startup - Inicializa grafos e ferramentas do MCP.
+    Startup - Inicializa banco de dados de autenticação, grafos e ferramentas do MCP.
     """
     logger.info("Iniciando aplicação...")
+
+    # Inicializa banco de dados de autenticação
+    try:
+        await init_db()
+        logger.info("Banco de dados de autenticação inicializado")
+    except Exception as e:
+        logger.error(f"Erro ao inicializar banco de dados: {e}")
+
+    # Inicializa grafos e ferramentas
     try:
         from app.agent.workflow import ensure_graphs
         await ensure_graphs()
@@ -109,7 +123,15 @@ async def shutdown_event():
     Graceful shutdown - Fecha recursos e aguarda requests em andamento.
     """
     logger.info("Iniciando shutdown graceful...")
-    # Aqui poderíamos fechar outros recursos se necessário
+
+    # Fechar pool de conexões PostgreSQL
+    try:
+        from app.auth.database import close_pool
+        await close_pool()
+        logger.info("Pool PostgreSQL fechado")
+    except Exception as e:
+        logger.error(f"Erro ao fechar pool PostgreSQL: {e}")
+
     logger.info("Shutdown completo")
 
 # Bloco de execução (opcional, já que usamos 'uv run')
