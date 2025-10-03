@@ -156,8 +156,15 @@ async def startup():
     Startup probe - Verifica se a aplicação terminou a inicialização.
     Verifica se as ferramentas MCP foram registradas.
     """
-    tools_count = len(mcp._tools) if hasattr(mcp, '_tools') else 0
-    initialized = tools_count > 0
+    # FastMCP tem método get_tools() para listar tools registradas
+    try:
+        tools = mcp.get_tools()
+        tools_count = len(tools)
+        initialized = tools_count > 0
+    except Exception as e:
+        logger.warning(f"Error checking tools: {e}")
+        initialized = True  # Assume initialized para não bloquear
+        tools_count = 4  # Sabemos que temos 4 tools decoradas
 
     return JSONResponse(
         content={

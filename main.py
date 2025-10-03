@@ -90,6 +90,19 @@ async def startup():
         status_code=200 if tools_initialized else 503
     )
 
+@app.on_event("startup")
+async def startup_event():
+    """
+    Startup - Inicializa grafos e ferramentas do MCP.
+    """
+    logger.info("Iniciando aplicação...")
+    try:
+        from app.agent.workflow import ensure_graphs
+        await ensure_graphs()
+        logger.info("Grafos e ferramentas inicializados com sucesso")
+    except Exception as e:
+        logger.error(f"Erro ao inicializar grafos: {e}")
+
 @app.on_event("shutdown")
 async def shutdown_event():
     """
