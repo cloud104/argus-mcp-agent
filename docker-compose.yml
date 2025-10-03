@@ -1,5 +1,26 @@
 services:
-  # ChromaDB - Deve iniciar primeiro
+  # PostgreSQL - Authentication Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: argus-postgres
+    ports:
+      - "5433:5432"  # External:Internal - evita conflito com PostgreSQL local
+    environment:
+      - POSTGRES_USER=argus
+      - POSTGRES_PASSWORD=argus123
+      - POSTGRES_DB=argus_auth
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - argus-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U argus -d argus_auth"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ChromaDB - Vector Database for RAG
   chromadb:
     image: chromadb/chroma:latest
     container_name: argus-chromadb
@@ -35,7 +56,7 @@ services:
       retries: 5
       start_period: 15s
 
-  # Main Application - Depende do MCP Server
+  # Main Application - Depende do MCP Server e PostgreSQL
   app:
     image: southamerica-east1-docker.pkg.dev/tcloud-devops/tcloud-devops/argus-app:latest
     container_name: argus-app
@@ -48,6 +69,8 @@ services:
     networks:
       - argus-network
     depends_on:
+      postgres:
+        condition: service_healthy
       mcp-server:
         condition: service_healthy
     healthcheck:
@@ -63,3 +86,4 @@ networks:
 
 volumes:
   chroma_data:
+  postgres_data:

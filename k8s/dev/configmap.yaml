@@ -17,6 +17,17 @@ data:
   API_TIMEOUT_DEEP_DIVE: "120"
   API_TIMEOUT_CHAT: "120"
   API_TIMEOUT_LOG_EXPLAIN: "30"
+
+  # PostgreSQL Configuration
+  POSTGRES_HOST: "argus-postgres"
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: "argus_auth"
+
+  # JWT Configuration
+  JWT_ALGORITHM: "HS256"
+  JWT_ACCESS_TOKEN_EXPIRE_MINUTES: "30"
+  JWT_REFRESH_TOKEN_EXPIRE_DAYS: "7"
+  DEFAULT_ADMIN_PASSWORD: "admin123"
 ---
 apiVersion: v1
 kind: ConfigMap
