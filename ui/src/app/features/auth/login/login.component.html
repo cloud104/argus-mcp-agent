@@ -1,0 +1,71 @@
+<div class="login-container">
+  <div class="login-card totvs-card">
+    <div class="login-header">
+      <div class="logo">
+        <svg class="logo-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+        </svg>
+      </div>
+      <h1 class="totvs-heading--2">Argus Agent</h1>
+      <p class="totvs-text--muted">Assistente SRE AI-powered</p>
+    </div>
+
+    @if (errorMessage()) {
+      <div class="totvs-alert totvs-alert--danger">
+        {{ errorMessage() }}
+      </div>
+    }
+
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
+      <div class="totvs-form-group">
+        <label for="username">Usuário</label>
+        <input
+          type="text"
+          id="username"
+          formControlName="username"
+          class="totvs-input"
+          placeholder="Digite seu usuário"
+          [class.totvs-input--error]="loginForm.get('username')?.invalid && loginForm.get('username')?.touched"
+        />
+        @if (loginForm.get('username')?.invalid && loginForm.get('username')?.touched) {
+          <span class="error-message">Usuário é obrigatório</span>
+        }
+      </div>
+
+      <div class="totvs-form-group">
+        <label for="password">Senha</label>
+        <input
+          type="password"
+          id="password"
+          formControlName="password"
+          class="totvs-input"
+          placeholder="Digite sua senha"
+          [class.totvs-input--error]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched"
+        />
+        @if (loginForm.get('password')?.invalid && loginForm.get('password')?.touched) {
+          <span class="error-message">Senha é obrigatória</span>
+        }
+      </div>
+
+      <button
+        type="submit"
+        class="totvs-btn totvs-btn--primary w-full"
+        [disabled]="isLoading() || loginForm.invalid"
+      >
+        @if (isLoading()) {
+          <div class="totvs-spinner totvs-spinner--sm"></div>
+          <span>Entrando...</span>
+        } @else {
+          <span>Entrar</span>
+        }
+      </button>
+    </form>
+
+    <div class="login-footer">
+      <p class="totvs-text--tiny totvs-text--muted">
+        Credenciais padrão: <strong>admin</strong> / <strong>admin123</strong>
+      </p>
+    </div>
+  </div>
+</div>

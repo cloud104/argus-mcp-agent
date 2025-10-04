@@ -1,0 +1,76 @@
+@import '../../../../styles/totvs-theme';
+
+.login-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0033A0 0%, #0066CC 100%);
+  padding: $totvs-spacing-lg;
+}
+
+.login-card {
+  max-width: 450px;
+  width: 100%;
+  animation: slideUp 0.4s ease;
+}
+
+.login-header {
+  text-align: center;
+  margin-bottom: $totvs-spacing-xl;
+
+  .logo {
+    display: flex;
+    justify-content: center;
+    margin-bottom: $totvs-spacing-md;
+
+    .logo-icon {
+      width: 64px;
+      height: 64px;
+      color: #0033A0;
+    }
+  }
+
+  h1 {
+    color: $totvs-gray-900;
+    margin-bottom: $totvs-spacing-xs;
+  }
+
+  p {
+    font-size: 14px;
+  }
+}
+
+.login-form {
+  margin-bottom: $totvs-spacing-lg;
+
+  .totvs-form-group:last-of-type {
+    margin-bottom: $totvs-spacing-xl;
+  }
+}
+
+.login-footer {
+  text-align: center;
+  padding-top: $totvs-spacing-lg;
+  border-top: 1px solid $totvs-gray-200;
+
+  p {
+    margin: 0;
+
+    strong {
+      color: #0033A0;
+      font-weight: 600;
+    }
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}

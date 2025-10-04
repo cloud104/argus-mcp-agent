@@ -1,0 +1,61 @@
+// TOTVS Design System - Color Palette
+// Based on https://www.totvs.com/
+
+// Primary colors
+$totvs-primary: #0033A0; // TOTVS Primary Blue
+$totvs-primary-light: #0047CC;
+$totvs-primary-dark: #00257c;
+$totvs-primary-hover: #002d8f;
+
+// Accent colors
+$totvs-accent: #00B388; // TOTVS Green
+$totvs-accent-light: #00d9a0;
+$totvs-accent-dark: #008c68;
+
+// Semantic colors
+$totvs-success: #00B388;
+$totvs-info: #0066CC;
+$totvs-warning: #FF9800;
+$totvs-danger: #E53935;
+
+// Grayscale
+$totvs-gray-50: #FAFAFA;
+$totvs-gray-100: #F5F5F5;
+$totvs-gray-200: #EEEEEE;
+$totvs-gray-300: #E0E0E0;
+$totvs-gray-400: #BDBDBD;
+$totvs-gray-500: #9E9E9E;
+$totvs-gray-600: #757575;
+$totvs-gray-700: #616161;
+$totvs-gray-800: #424242;
+$totvs-gray-900: #212121;
+
+// Background colors
+$totvs-bg-light: #FAFAFA;
+$totvs-bg-white: #FFFFFF;
+$totvs-bg-dark: #1A1A1A;
+
+// Typography
+$totvs-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+$totvs-font-size-base: 16px;
+
+// Shadows
+$totvs-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+$totvs-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+$totvs-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+$totvs-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+
+// Border radius
+$totvs-radius-sm: 4px;
+$totvs-radius-md: 8px;
+$totvs-radius-lg: 12px;
+$totvs-radius-xl: 16px;
+$totvs-radius-full: 9999px;
+
+// Spacing
+$totvs-spacing-xs: 4px;
+$totvs-spacing-sm: 8px;
+$totvs-spacing-md: 16px;
+$totvs-spacing-lg: 24px;
+$totvs-spacing-xl: 32px;
+$totvs-spacing-2xl: 48px;

@@ -1,0 +1,385 @@
+<div class="log-explorer-container">
+  <!-- Header -->
+  <header class="header totvs-card">
+    <div class="header-left">
+      <svg class="logo-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+      </svg>
+      <h1 class="totvs-heading--3">Argus Log Explorer</h1>
+    </div>
+    <div class="header-right">
+      <button class="totvs-btn totvs-btn--ghost" (click)="toggleInsightsPanel()">
+        <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+        </svg>
+        Análise IA
+      </button>
+      @if (currentUser | async; as user) {
+        <div class="user-menu">
+          <div class="user-avatar">{{ user.username.charAt(0).toUpperCase() }}</div>
+          <span class="user-name">{{ user.username }}</span>
+          <button class="totvs-btn totvs-btn--icon" (click)="logout()" title="Sair">
+            <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+            </svg>
+          </button>
+        </div>
+      }
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <!-- Search Form -->
+    <div class="search-card totvs-card">
+      <form [formGroup]="searchForm" (ngSubmit)="onSearch()">
+        <div class="search-grid">
+          <div class="totvs-form-group">
+            <label for="ccode">CCODE</label>
+            <input
+              type="text"
+              id="ccode"
+              formControlName="ccode"
+              class="totvs-input"
+              placeholder="Ex: csalva7"
+            />
+          </div>
+
+          <div class="totvs-form-group">
+            <label for="topology">Topology ID</label>
+            <input
+              type="text"
+              id="topology"
+              formControlName="topology"
+              class="totvs-input"
+              placeholder="Ex: 203089"
+            />
+          </div>
+
+          <div class="totvs-form-group">
+            <label for="datetime">Janela de Tempo</label>
+            <input
+              type="datetime-local"
+              id="datetime"
+              formControlName="datetime"
+              class="totvs-input"
+            />
+          </div>
+
+          <div class="search-button-wrapper">
+            <button
+              type="submit"
+              class="totvs-btn totvs-btn--primary w-full"
+              [disabled]="isSearching() || searchForm.invalid"
+            >
+              @if (isSearching()) {
+                <div class="totvs-spinner totvs-spinner--sm"></div>
+                <span>Buscando...</span>
+              } @else {
+                <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+                <span>Buscar</span>
+              }
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    @if (errorMessage()) {
+      <div class="totvs-alert totvs-alert--danger">
+        {{ errorMessage() }}
+      </div>
+    }
+
+    <!-- Logs Section -->
+    @if (allLogs().length > 0) {
+      <!-- Log Distribution Chart -->
+      <div class="chart-card totvs-card">
+        <h3 class="chart-title">Distribuição de Logs</h3>
+        <div class="chart-container">
+          <canvas id="logHistogram"></canvas>
+        </div>
+      </div>
+
+      <div class="logs-card totvs-card">
+        <!-- Filter Bar -->
+        <div class="filter-bar">
+          <input
+            type="text"
+            class="totvs-input"
+            placeholder="Digite um filtro (ex: severity:error) e pressione Enter..."
+            (keydown)="addFilter($event)"
+          />
+          <button class="totvs-btn totvs-btn--ghost" (click)="clearAllFilters()">
+            Limpar Tudo
+          </button>
+        </div>
+
+        <!-- Filter Pills -->
+        @if (filterPills().length > 0) {
+          <div class="filter-pills">
+            @for (pill of filterPills(); track pill.value; let i = $index) {
+              <div class="totvs-pill totvs-pill--primary">
+                <span>{{ pill.label }}</span>
+                <button class="remove-btn" (click)="removeFilter(i)">&times;</button>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- Log Summary -->
+        <div class="log-summary totvs-text--small totvs-text--muted">
+          Exibindo <strong>{{ filteredLogs().length }}</strong> de <strong>{{ allLogs().length }}</strong> logs
+        </div>
+
+        <!-- Log List -->
+        <div class="log-list">
+          @for (log of filteredLogs(); track log._id || log.id || $index; let idx = $index) {
+            <div class="log-entry" [class.expanded]="expandedLogIndex() === idx">
+              <div class="log-header">
+                <button
+                  class="ai-explain-btn"
+                  (click)="onExplainLog(log.message, idx)"
+                  [title]="expandedLogIndex() === idx ? 'Fechar explicação' : 'AI: Explicar esta linha'"
+                  [disabled]="isExplaining() && expandedLogIndex() !== idx"
+                  [class.active]="expandedLogIndex() === idx"
+                >
+                  <svg class="ai-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                  </svg>
+                  <span class="ai-label">AI</span>
+                </button>
+                <span class="log-time">{{ log.timestamp | date:'HH:mm:ss' }}</span>
+                <span class="log-severity" [ngClass]="getSeverityClass(log.severity)">
+                  {{ log.severity }}
+                </span>
+                <span class="log-appname">{{ log.appname }}</span>
+                <span class="log-message">{{ log.message }}</span>
+              </div>
+
+              @if (expandedLogIndex() === idx) {
+                <div class="log-explanation">
+                  @if (isExplaining()) {
+                    <div class="explanation-loading">
+                      <div class="totvs-spinner totvs-spinner--sm"></div>
+                      <span>Analisando...</span>
+                    </div>
+                  } @else if (logExplanation()) {
+                    <div class="explanation-content">
+                      <div class="explanation-header">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                        </svg>
+                        <strong>Análise da IA:</strong>
+                      </div>
+                      <p class="explanation-text">{{ logExplanation() }}</p>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          } @empty {
+            <div class="empty-state text-center">
+              <p class="totvs-text--muted">Nenhum log encontrado com os filtros aplicados</p>
+            </div>
+          }
+        </div>
+      </div>
+    } @else if (!isSearching()) {
+      <div class="empty-state totvs-card text-center">
+        <svg class="empty-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+        </svg>
+        <h3 class="totvs-heading--4">Pronto para começar</h3>
+        <p class="totvs-text--muted">Preencha os dados acima e clique em "Analisar"</p>
+      </div>
+    }
+  </main>
+</div>
+
+<!-- Insights Panel -->
+@if (showInsightsPanel()) {
+  <aside class="insights-panel totvs-card--elevated">
+    <div class="insights-header">
+      <h2 class="totvs-heading--4">Análise da IA</h2>
+      <button class="totvs-btn totvs-btn--icon" (click)="toggleInsightsPanel()">
+        <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="insights-body">
+      <div class="insights-content">
+        @if (!deepDiveAnalysis()) {
+          <p class="totvs-text--small totvs-text--muted">
+            A IA irá analisar os logs <strong>atualmente filtrados</strong> no explorer.
+          </p>
+          <button class="totvs-btn totvs-btn--primary w-full mt-lg" (click)="onDeepDive()" [disabled]="isDeepDiving()">
+            @if (isDeepDiving()) {
+              <div class="totvs-spinner totvs-spinner--sm"></div>
+              <span>Analisando...</span>
+            } @else {
+              <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+              </svg>
+              <span>Obter Insights</span>
+            }
+          </button>
+        } @else {
+        <div class="analysis-result">
+          <div class="flex justify-between items-center mb-3">
+            <h3 class="totvs-heading--5">Resultado da Análise</h3>
+            <button class="totvs-btn totvs-btn--ghost totvs-btn--sm" (click)="startChat()">
+              <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+              </svg>
+              Conversar sobre
+            </button>
+          </div>
+
+          @if (deepDiveAnalysis().resumo_analitico) {
+            <details class="analysis-section" [attr.open]="!showChat() ? '' : null">
+              <summary class="analysis-section-title">
+                <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                </svg>
+                <span>Resumo Analítico</span>
+                <button
+                  class="copy-btn"
+                  (click)="copyToClipboard(deepDiveAnalysis().resumo_analitico, $event)"
+                  title="Copiar texto"
+                >
+                  <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                  </svg>
+                </button>
+              </summary>
+              <div class="analysis-section-content">
+                {{ deepDiveAnalysis().resumo_analitico }}
+              </div>
+            </details>
+          }
+
+          @if (deepDiveAnalysis().hipotese_causa_raiz) {
+            <details class="analysis-section" [attr.open]="!showChat() ? '' : null">
+              <summary class="analysis-section-title">
+                <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+                <span>Hipótese de Causa Raiz</span>
+                <button
+                  class="copy-btn"
+                  (click)="copyToClipboard(deepDiveAnalysis().hipotese_causa_raiz, $event)"
+                  title="Copiar texto"
+                >
+                  <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                  </svg>
+                </button>
+              </summary>
+              <div class="analysis-section-content">
+                {{ deepDiveAnalysis().hipotese_causa_raiz }}
+              </div>
+            </details>
+          }
+
+          @if (deepDiveAnalysis().acoes_recomendadas && deepDiveAnalysis().acoes_recomendadas.length > 0) {
+            <details class="analysis-section" [attr.open]="!showChat() ? '' : null">
+              <summary class="analysis-section-title">
+                <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                </svg>
+                <span>Ações Recomendadas</span>
+                <button
+                  class="copy-btn"
+                  (click)="copyToClipboard(deepDiveAnalysis().acoes_recomendadas.join('\\n'), $event)"
+                  title="Copiar texto"
+                >
+                  <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                  </svg>
+                </button>
+              </summary>
+              <ul class="analysis-section-content analysis-actions-list">
+                @for (action of deepDiveAnalysis().acoes_recomendadas; track $index) {
+                  <li>{{ action }}</li>
+                }
+              </ul>
+            </details>
+          }
+
+          <button class="totvs-btn totvs-btn--secondary w-full mt-lg" (click)="deepDiveAnalysis.set(null); onDeepDive()" [disabled]="isDeepDiving()">
+            @if (isDeepDiving()) {
+              <div class="totvs-spinner totvs-spinner--sm"></div>
+              <span>Analisando...</span>
+            } @else {
+              <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+              </svg>
+              <span>Refazer Análise</span>
+            }
+          </button>
+        </div>
+        }
+      </div>
+
+      <!-- Chat Interface (shown below analysis when activated) -->
+      @if (showChat()) {
+        <div class="chat-interface">
+          <div class="chat-history" #chatHistory>
+            @for (msg of chatMessages(); track $index) {
+              <div class="chat-message" [class.user]="msg.sender === 'user'" [class.ai]="msg.sender === 'ai'">
+                <div class="chat-avatar">
+                  @if (msg.sender === 'user') {
+                    <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                    </svg>
+                  } @else {
+                    <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                    </svg>
+                  }
+                </div>
+                <div class="chat-bubble">{{ msg.text }}</div>
+              </div>
+            }
+            @if (isChatting()) {
+              <div class="chat-message ai">
+                <div class="chat-avatar">
+                  <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                  </svg>
+                </div>
+                <div class="chat-bubble chat-typing">
+                  <span></span><span></span><span></span>
+                </div>
+              </div>
+            }
+          </div>
+          <div class="chat-input-bar">
+            <textarea
+              #chatInput
+              class="chat-input-field"
+              placeholder="Pergunte sobre a análise..."
+              rows="2"
+              (keydown.enter)="onChatKeydown($any($event), chatInput)"
+            ></textarea>
+            <button
+              class="chat-send-btn"
+              [class.enabled]="chatInput.value.trim()"
+              [disabled]="!chatInput.value.trim() || isChatting()"
+              (click)="onChatSubmit(chatInput)"
+            >
+              <svg class="icon" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M3.478 2.404a.75.75 0 0 0-.926.941l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.404Z"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  </aside>
+}

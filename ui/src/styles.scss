@@ -1,0 +1,177 @@
+/* TOTVS Argus Agent - Global Styles */
+
+@import 'styles/totvs-theme';
+@import 'styles/totvs-components';
+
+/* Google Fonts - Inter */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* Reset and Base Styles */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  font-family: $totvs-font-family;
+  font-size: $totvs-font-size-base;
+  color: $totvs-gray-900;
+  background-color: $totvs-bg-light;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar customization */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: $totvs-gray-100;
+}
+
+::-webkit-scrollbar-thumb {
+  background: $totvs-gray-400;
+  border-radius: $totvs-radius-full;
+
+  &:hover {
+    background: $totvs-gray-500;
+  }
+}
+
+/* Utility Classes */
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 $totvs-spacing-lg;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.flex {
+  display: flex;
+}
+
+.flex-col {
+  flex-direction: column;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.justify-center {
+  justify-content: center;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.gap-sm {
+  gap: $totvs-spacing-sm;
+}
+
+.gap-md {
+  gap: $totvs-spacing-md;
+}
+
+.gap-lg {
+  gap: $totvs-spacing-lg;
+}
+
+.mt-sm {
+  margin-top: $totvs-spacing-sm;
+}
+
+.mt-md {
+  margin-top: $totvs-spacing-md;
+}
+
+.mt-lg {
+  margin-top: $totvs-spacing-lg;
+}
+
+.mb-sm {
+  margin-bottom: $totvs-spacing-sm;
+}
+
+.mb-md {
+  margin-bottom: $totvs-spacing-md;
+}
+
+.mb-lg {
+  margin-bottom: $totvs-spacing-lg;
+}
+
+.p-sm {
+  padding: $totvs-spacing-sm;
+}
+
+.p-md {
+  padding: $totvs-spacing-md;
+}
+
+.p-lg {
+  padding: $totvs-spacing-lg;
+}
+
+.w-full {
+  width: 100%;
+}
+
+.h-full {
+  height: 100%;
+}
+
+/* Angular Material Overrides for TOTVS Theme */
+.mat-mdc-button,
+.mat-mdc-raised-button,
+.mat-mdc-flat-button {
+  border-radius: $totvs-radius-md !important;
+  font-weight: 600 !important;
+}
+
+.mat-mdc-card {
+  border-radius: $totvs-radius-lg !important;
+  box-shadow: $totvs-shadow-md !important;
+}
+
+.mat-mdc-form-field {
+  .mat-mdc-text-field-wrapper {
+    border-radius: $totvs-radius-md !important;
+  }
+}
+
+/* Animation utilities */
+.fade-in {
+  animation: fadeIn 0.3s ease;
+}
+
+.slide-up {
+  animation: slideUp 0.3s ease;
+}
+
+.slide-down {
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
