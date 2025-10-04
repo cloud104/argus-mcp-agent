@@ -1,0 +1,212 @@
+<div class="dashboard-container">
+  <!-- Header -->
+  <div class="dashboard-header">
+    <div class="header-left">
+      <img src="/assets/images/logo.svg" alt="TOTVS" class="logo-image">
+      <button class="back-button" (click)="goBack()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+        Voltar
+      </button>
+      <h1>Dashboard de Métricas</h1>
+    </div>
+
+    <div class="window-selector">
+      <button
+        *ngFor="let window of windows"
+        [class.active]="selectedWindow() === window.value"
+        (click)="changeWindow(window.value)">
+        {{ window.label }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading()" class="dashboard-skeleton">
+    <!-- Summary Cards Skeleton -->
+    <div class="skeleton-summary-cards">
+      @for (item of [1,2,3,4]; track item) {
+        <div class="skeleton-metric-card">
+          <div class="skeleton-metric-icon"></div>
+          <div class="skeleton-metric-content">
+            <div class="skeleton-metric-label"></div>
+            <div class="skeleton-metric-value"></div>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Charts Skeleton -->
+    <div class="skeleton-charts">
+      <div class="skeleton-chart-card">
+        <div class="skeleton-chart-title"></div>
+        <div class="skeleton-bars">
+          @for (item of [1,2,3,4,5]; track item) {
+            <div class="skeleton-bar"></div>
+          }
+        </div>
+      </div>
+
+      <div class="skeleton-chart-card">
+        <div class="skeleton-chart-title"></div>
+        <div class="skeleton-bars">
+          @for (item of [1,2,3]; track item) {
+            <div class="skeleton-bar"></div>
+          }
+        </div>
+      </div>
+
+      <div class="skeleton-chart-card">
+        <div class="skeleton-chart-title"></div>
+        <div class="skeleton-list">
+          @for (item of [1,2,3,4,5]; track item) {
+            <div class="skeleton-list-row"></div>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="errorMessage()" class="error-message">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="12" y1="8" x2="12" y2="12"/>
+      <line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+    {{ errorMessage() }}
+  </div>
+
+  <!-- Metrics Grid -->
+  <div *ngIf="metrics() && !isLoading()" class="metrics-grid">
+    <!-- Summary Cards -->
+    <div class="summary-cards">
+      <div class="metric-card">
+        <div class="metric-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+          </svg>
+        </div>
+        <div class="metric-content">
+          <div class="metric-label">Total de Logs</div>
+          <div class="metric-value">{{ formatNumber(metrics()!.total_logs) }}</div>
+        </div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-icon" [style.background]="'linear-gradient(135deg, ' + getErrorRateColor() + ' 0%, ' + getErrorRateColor() + 'cc 100%)'">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+        </div>
+        <div class="metric-content">
+          <div class="metric-label">Taxa de Erros</div>
+          <div class="metric-value">{{ metrics()!.error_rate }}%</div>
+        </div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-icon" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
+            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+          </svg>
+        </div>
+        <div class="metric-content">
+          <div class="metric-label">Aplicações</div>
+          <div class="metric-value">{{ getAppnameKeys().length }}</div>
+        </div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-icon" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="2" width="20" height="8" rx="2" ry="2"/>
+            <rect x="2" y="14" width="20" height="8" rx="2" ry="2"/>
+            <line x1="6" y1="6" x2="6.01" y2="6"/>
+            <line x1="6" y1="18" x2="6.01" y2="18"/>
+          </svg>
+        </div>
+        <div class="metric-content">
+          <div class="metric-label">Hosts</div>
+          <div class="metric-value">{{ metrics()!.top_hosts.length }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Severity Distribution -->
+    <div class="chart-card">
+      <h3>Distribuição por Severidade</h3>
+      <div class="chart-content">
+        <div class="bar-chart">
+          <div *ngFor="let severity of getSeverityKeys()" class="bar-item">
+            <div class="bar-label">{{ severity }}</div>
+            <div class="bar-container">
+              <div
+                class="bar-fill"
+                [style.width.%]="(metrics()!.severity_distribution[severity] / metrics()!.total_logs) * 100"
+                [style.background]="getSeverityColor(severity)">
+              </div>
+            </div>
+            <div class="bar-value">{{ formatNumber(metrics()!.severity_distribution[severity]) }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top Applications -->
+    <div class="chart-card">
+      <h3>Top Aplicações</h3>
+      <div class="chart-content">
+        <div class="bar-chart">
+          <div *ngFor="let appname of getAppnameKeys()" class="bar-item">
+            <div class="bar-label app-label">{{ appname }}</div>
+            <div class="bar-container">
+              <div
+                class="bar-fill"
+                [style.width.%]="(metrics()!.appname_distribution[appname] / metrics()!.total_logs) * 100"
+                style="background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);">
+              </div>
+            </div>
+            <div class="bar-value">{{ formatNumber(metrics()!.appname_distribution[appname]) }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top Hosts -->
+    <div class="chart-card">
+      <h3>Top Hosts</h3>
+      <div class="chart-content">
+        <div class="host-list">
+          <div *ngFor="let host of metrics()!.top_hosts; let i = index" class="host-item">
+            <div class="host-rank">{{ i + 1 }}</div>
+            <div class="host-info">
+              <div class="host-name">{{ host.host }}</div>
+              <div class="host-bar">
+                <div
+                  class="host-bar-fill"
+                  [style.width.%]="(host.count / metrics()!.top_hosts[0].count) * 100">
+                </div>
+              </div>
+            </div>
+            <div class="host-count">{{ formatNumber(host.count) }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Period Info -->
+    <div class="period-info">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/>
+        <polyline points="12 6 12 12 16 14"/>
+      </svg>
+      Período: {{ metrics()!.period.start | date:'short' }} - {{ metrics()!.period.end | date:'short' }}
+    </div>
+  </div>
+</div>

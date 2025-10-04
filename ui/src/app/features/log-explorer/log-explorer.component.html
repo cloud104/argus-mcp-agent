@@ -2,13 +2,16 @@
   <!-- Header -->
   <header class="header totvs-card">
     <div class="header-left">
-      <svg class="logo-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-      </svg>
+      <img src="/assets/images/logo.svg" alt="TOTVS" class="logo-image">
       <h1 class="totvs-heading--3">Argus Log Explorer</h1>
     </div>
     <div class="header-right">
+      <button class="totvs-btn totvs-btn--ghost" (click)="navigateToDashboard()">
+        <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+        </svg>
+        Dashboard
+      </button>
       <button class="totvs-btn totvs-btn--ghost" (click)="toggleInsightsPanel()">
         <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
@@ -113,7 +116,38 @@
     }
 
     <!-- Logs Section -->
-    @if (allLogs().length > 0) {
+    @if (isSearching()) {
+      <!-- Skeleton Loading State -->
+      <div class="skeleton-container">
+        <!-- Chart Skeleton -->
+        <div class="skeleton-card">
+          <div class="skeleton-title"></div>
+          <div class="skeleton-chart"></div>
+        </div>
+
+        <!-- Logs List Skeleton -->
+        <div class="skeleton-card">
+          <div class="skeleton-header">
+            <div class="skeleton-search-bar"></div>
+            <div class="skeleton-filter-pills">
+              <div class="skeleton-pill"></div>
+              <div class="skeleton-pill"></div>
+              <div class="skeleton-pill"></div>
+            </div>
+          </div>
+
+          <div class="skeleton-log-list">
+            @for (item of [1,2,3,4,5,6,7,8]; track item) {
+              <div class="skeleton-log-entry">
+                <div class="skeleton-log-time"></div>
+                <div class="skeleton-log-severity"></div>
+                <div class="skeleton-log-text"></div>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    } @else if (allLogs().length > 0) {
       <!-- Log Distribution Chart -->
       <div class="chart-card totvs-card">
         <h3 class="chart-title">Distribuição de Logs</h3>
@@ -192,13 +226,17 @@
 
         <!-- Log Summary -->
         <div class="log-summary totvs-text--small totvs-text--muted">
-          Exibindo <strong>{{ filteredLogs().length }}</strong> de <strong>{{ allLogs().length }}</strong> logs
+          Exibindo <strong>{{ paginationInfo().start }} - {{ paginationInfo().end }}</strong> de <strong>{{ paginationInfo().total }}</strong> logs
+          @if (filteredLogs().length < allLogs().length) {
+            ({{ filteredLogs().length }} filtrados)
+          }
         </div>
 
         <!-- Log List -->
-        <div class="log-list">
-          @for (log of filteredLogs(); track log._id || log.id || $index; let idx = $index) {
-            <div class="log-entry" [class.expanded]="expandedLogIndex() === idx">
+        <cdk-virtual-scroll-viewport [itemSize]="60" class="log-list logs-list">
+          <div *cdkVirtualFor="let log of paginatedLogs(); let idx = index; trackBy: trackByLogId"
+               class="log-entry"
+               [class.expanded]="expandedLogIndex() === idx">
               <div class="log-header">
                 <button
                   class="ai-explain-btn"
@@ -241,12 +279,70 @@
                 </div>
               }
             </div>
-          } @empty {
-            <div class="empty-state text-center">
-              <p class="totvs-text--muted">Nenhum log encontrado com os filtros aplicados</p>
+        </cdk-virtual-scroll-viewport>
+
+        <!-- Empty State -->
+        @if (paginatedLogs().length === 0) {
+          <div class="empty-state text-center">
+            <p class="totvs-text--muted">Nenhum log encontrado com os filtros aplicados</p>
+          </div>
+        }
+
+        <!-- Pagination Controls -->
+        @if (filteredLogs().length > 0) {
+          <div class="pagination-container">
+            <!-- Items per page selector -->
+            <div class="pagination-per-page">
+              <span class="per-page-label">Itens por página:</span>
+              <select class="per-page-select" [value]="itemsPerPage()" (change)="changeItemsPerPage(+$any($event.target).value)">
+                @for (option of itemsPerPageOptions; track option) {
+                  <option [value]="option">{{ option }}</option>
+                }
+              </select>
             </div>
-          }
-        </div>
+
+            <!-- Page navigation -->
+            <div class="pagination-nav">
+              <button
+                class="pagination-btn"
+                (click)="previousPage()"
+                [disabled]="currentPage() === 1"
+                title="Página anterior">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M15 18l-6-6 6-6"/>
+                </svg>
+              </button>
+
+              @for (page of getPageNumbers(); track $index) {
+                @if (page === -1) {
+                  <span class="pagination-ellipsis">...</span>
+                } @else {
+                  <button
+                    class="pagination-btn pagination-num"
+                    [class.active]="page === currentPage()"
+                    (click)="goToPage(page)">
+                    {{ page }}
+                  </button>
+                }
+              }
+
+              <button
+                class="pagination-btn"
+                (click)="nextPage()"
+                [disabled]="currentPage() === totalPages()"
+                title="Próxima página">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M9 18l6-6-6-6"/>
+                </svg>
+              </button>
+            </div>
+
+            <!-- Page info -->
+            <div class="pagination-info">
+              Página {{ currentPage() }} de {{ totalPages() }}
+            </div>
+          </div>
+        }
       </div>
     } @else if (!isSearching()) {
       <div class="empty-state totvs-card text-center">
@@ -273,20 +369,37 @@
     </div>
     <div class="insights-body">
       <div class="insights-content">
-        @if (!deepDiveAnalysis()) {
+        @if (isDeepDiving() && !deepDiveAnalysis()) {
+          <!-- Deep Dive Skeleton -->
+          <div class="insights-skeleton">
+            <div class="skeleton-insights-title"></div>
+            <div class="skeleton-insights-text"></div>
+            <div class="skeleton-insights-text short"></div>
+
+            <div class="skeleton-section-divider"></div>
+
+            <div class="skeleton-insights-subtitle"></div>
+            <div class="skeleton-insights-list">
+              @for (item of [1,2,3,4]; track item) {
+                <div class="skeleton-list-item"></div>
+              }
+            </div>
+
+            <div class="skeleton-section-divider"></div>
+
+            <div class="skeleton-insights-subtitle"></div>
+            <div class="skeleton-insights-text"></div>
+            <div class="skeleton-insights-text medium"></div>
+          </div>
+        } @else if (!deepDiveAnalysis()) {
           <p class="totvs-text--small totvs-text--muted">
             A IA irá analisar os logs <strong>atualmente filtrados</strong> no explorer.
           </p>
           <button class="totvs-btn totvs-btn--primary w-full mt-lg" (click)="onDeepDive()" [disabled]="isDeepDiving()">
-            @if (isDeepDiving()) {
-              <div class="totvs-spinner totvs-spinner--sm"></div>
-              <span>Analisando...</span>
-            } @else {
-              <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
-              </svg>
-              <span>Obter Insights</span>
-            }
+            <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+            </svg>
+            <span>Obter Insights</span>
           </button>
         } @else {
         <div class="analysis-result">

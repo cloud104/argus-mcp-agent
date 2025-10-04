@@ -22,12 +22,16 @@
   .logo {
     display: flex;
     justify-content: center;
-    margin-bottom: $totvs-spacing-md;
+    align-items: center;
+    margin-bottom: $totvs-spacing-lg;
+    padding: $totvs-spacing-md;
+    background: rgba(0, 51, 160, 0.05);
+    border-radius: 12px;
 
-    .logo-icon {
-      width: 64px;
+    .logo-image {
       height: 64px;
-      color: #0033A0;
+      width: auto;
+      max-width: 280px;
     }
   }
 

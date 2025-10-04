@@ -12,6 +12,7 @@ load_dotenv()
 # Importa o router do ficheiro de rotas
 from app.api import routes
 from app.auth import routes as auth_routes
+from app.metrics import routes as metrics_routes
 from app.auth.database import init_db
 
 # Cria a instância da aplicação
@@ -31,6 +32,9 @@ app.include_router(auth_routes.router)
 
 # Inclui as rotas da API principal
 app.include_router(routes.router)
+
+# Inclui as rotas de métricas
+app.include_router(metrics_routes.router)
 
 logger = logging.getLogger(__name__)
 

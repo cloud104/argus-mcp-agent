@@ -32,6 +32,9 @@ httpx==0.28.1
 # Utilities
 typing-extensions==4.15.0
 
+# Elasticsearch (for metrics aggregations)
+elasticsearch==8.17.2
+
 # Authentication & Database
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4

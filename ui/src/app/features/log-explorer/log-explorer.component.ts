@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Observable } from 'rxjs';
+import { ScrollingModule } from '@angular/cdk/scrolling';
 import { AuthService, User } from '../../core/auth/auth.service';
 import { ApiService, LogEntry, InitialAnalysisResponse } from '../../core/api/api.service';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
@@ -19,7 +20,7 @@ interface FilterPill {
 @Component({
   selector: 'app-log-explorer',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, ScrollingModule],
   templateUrl: './log-explorer.component.html',
   styleUrl: './log-explorer.component.scss'
 })
@@ -46,6 +47,11 @@ export class LogExplorerComponent implements OnInit, OnDestroy {
   showChat = signal(false);
   chatMessages = signal<Array<{text: string, sender: 'user' | 'ai'}>>([]);
   showExportMenu = signal(false);
+
+  // Pagination signals
+  currentPage = signal(1);
+  itemsPerPage = signal(50);
+  itemsPerPageOptions = [25, 50, 100, 200];
 
   // Computed
   filteredLogs = computed(() => {
@@ -102,6 +108,31 @@ export class LogExplorerComponent implements OnInit, OnDestroy {
         .slice(0, 3)
         .map(([name]) => name)
     };
+  });
+
+  // Pagination computed
+  totalPages = computed(() => {
+    const total = this.filteredLogs().length;
+    const perPage = this.itemsPerPage();
+    return Math.ceil(total / perPage) || 1;
+  });
+
+  paginatedLogs = computed(() => {
+    const logs = this.filteredLogs();
+    const page = this.currentPage();
+    const perPage = this.itemsPerPage();
+    const start = (page - 1) * perPage;
+    const end = start + perPage;
+    return logs.slice(start, end);
+  });
+
+  paginationInfo = computed(() => {
+    const total = this.filteredLogs().length;
+    const page = this.currentPage();
+    const perPage = this.itemsPerPage();
+    const start = total === 0 ? 0 : (page - 1) * perPage + 1;
+    const end = Math.min(page * perPage, total);
+    return { start, end, total };
   });
 
   constructor(
@@ -366,8 +397,75 @@ export class LogExplorerComponent implements OnInit, OnDestroy {
     this.authService.logout();
   }
 
+  navigateToDashboard(): void {
+    this.router.navigate(['/dashboard']);
+  }
+
   navigateToAdmin(): void {
     this.router.navigate(['/admin/users']);
+  }
+
+  /**
+   * Pagination methods
+   */
+  goToPage(page: number): void {
+    if (page >= 1 && page <= this.totalPages()) {
+      this.currentPage.set(page);
+      // Scroll to top of logs list
+      const logsContainer = document.querySelector('.logs-list');
+      if (logsContainer) {
+        logsContainer.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }
+  }
+
+  nextPage(): void {
+    this.goToPage(this.currentPage() + 1);
+  }
+
+  previousPage(): void {
+    this.goToPage(this.currentPage() - 1);
+  }
+
+  changeItemsPerPage(items: number): void {
+    this.itemsPerPage.set(items);
+    this.currentPage.set(1); // Reset to first page
+  }
+
+  getPageNumbers(): number[] {
+    const total = this.totalPages();
+    const current = this.currentPage();
+    const delta = 2; // Pages to show on each side of current
+
+    const range: number[] = [];
+    const rangeWithDots: number[] = [];
+
+    for (let i = Math.max(2, current - delta); i <= Math.min(total - 1, current + delta); i++) {
+      range.push(i);
+    }
+
+    if (current - delta > 2) {
+      rangeWithDots.push(1, -1); // -1 represents "..."
+    } else {
+      rangeWithDots.push(1);
+    }
+
+    rangeWithDots.push(...range);
+
+    if (current + delta < total - 1) {
+      rangeWithDots.push(-1, total);
+    } else if (total > 1) {
+      rangeWithDots.push(total);
+    }
+
+    return rangeWithDots;
+  }
+
+  /**
+   * TrackBy function for virtual scrolling
+   */
+  trackByLogId(index: number, log: LogEntry): any {
+    return log._id || log.id || index;
   }
 
   /**
