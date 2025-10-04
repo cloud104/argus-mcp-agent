@@ -2,10 +2,10 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: argus-app-ingress
+  name: argus-api-ingress
   namespace: argus-dev
   labels:
-    app: argus-app
+    app: argus-api
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
 spec:
@@ -18,7 +18,7 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: argus-app
+            name: argus-api
             port:
               number: 8000
 ---

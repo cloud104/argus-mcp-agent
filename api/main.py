@@ -1,6 +1,6 @@
 from fastapi import FastAPI
-from fastapi.responses import FileResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import os
 import httpx
@@ -15,17 +15,22 @@ from app.auth import routes as auth_routes
 from app.auth.database import init_db
 
 # Cria a instância da aplicação
-app = FastAPI(title="SRE Agent com LangGraph e MCP")
+app = FastAPI(title="Argus API - SRE Agent com LangGraph e MCP")
+
+# CORS - permite requisições do frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Em produção, especifique o domínio do frontend
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Inclui as rotas de autenticação
 app.include_router(auth_routes.router)
 
 # Inclui as rotas da API principal
 app.include_router(routes.router)
-
-# Serve o frontend
-static_dir = os.path.join(os.path.dirname(__file__), 'app/frontend')
-app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 logger = logging.getLogger(__name__)
 
@@ -42,10 +47,15 @@ async def check_mcp_server() -> bool:
         logger.warning(f"MCP server check failed: {e}")
         return False
 
-@app.get("/", response_class=FileResponse, include_in_schema=False)
+@app.get("/")
 def read_root():
-    """Serve o ficheiro HTML do frontend."""
-    return FileResponse(os.path.join(static_dir, 'index.html'))
+    """Root endpoint - API info."""
+    return {
+        "name": "Argus API",
+        "version": "1.0.0",
+        "description": "SRE Agent API com LangGraph e MCP",
+        "docs": "/docs"
+    }
 
 @app.get("/health/live", tags=["Health"])
 async def liveness():

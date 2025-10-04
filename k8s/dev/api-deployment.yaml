@@ -1,21 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: argus-app
+  name: argus-api
   namespace: argus-dev
   labels:
-    app: argus-app
+    app: argus-api
     component: frontend
     environment: development
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: argus-app
+      app: argus-api
   template:
     metadata:
       labels:
-        app: argus-app
+        app: argus-api
         component: frontend
     spec:
       terminationGracePeriodSeconds: 30
@@ -23,7 +23,7 @@ spec:
       - name: gcr-json-key
       containers:
       - name: app
-        image: southamerica-east1-docker.pkg.dev/tcloud-devops/tcloud-devops/argus-app:latest
+        image: southamerica-east1-docker.pkg.dev/tcloud-devops/tcloud-devops/argus-api:latest
         imagePullPolicy: Always
         command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
         ports:

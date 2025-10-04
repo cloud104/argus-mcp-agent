@@ -22,10 +22,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: argus-app
+  name: argus-api
   namespace: argus-dev
   labels:
-    app: argus-app
+    app: argus-api
 spec:
   type: LoadBalancer
   ports:
@@ -38,4 +38,4 @@ spec:
     protocol: TCP
     name: debug
   selector:
-    app: argus-app
+    app: argus-api

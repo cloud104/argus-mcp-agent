@@ -56,7 +56,7 @@ ingress:
           - path: /
             pathType: Prefix
     tls:
-      - secretName: argus-app-prod-tls
+      - secretName: argus-api-prod-tls
         hosts:
           - argus.example.com
 
@@ -118,5 +118,5 @@ affinity:
               - key: app
                 operator: In
                 values:
-                  - argus-app
+                  - argus-api
           topologyKey: kubernetes.io/hostname

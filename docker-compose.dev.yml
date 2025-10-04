@@ -1,39 +1,52 @@
-# Alternative docker-compose for development with debugging enabled
 services:
-  mcp-server:
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
-    container_name: argus-mcp-server-debug
-    command: >
-      sh -c "python -m debugpy --listen 0.0.0.0:5678 --wait-for-client -m uvicorn tools.server:app --host 0.0.0.0 --port 8002 --reload"
+  # PostgreSQL - Authentication Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: argus-postgres-dev
     ports:
-      - "8002:8002"
-      - "5679:5678"
-    volumes:
-      - .:/app
-      - ./chroma_db:/app/chroma_db
-    env_file:
-      - .env
+      - "5433:5432"
     environment:
-      - PYTHONUNBUFFERED=1
-      - PYTHONDONTWRITEBYTECODE=1
+      - POSTGRES_USER=argus
+      - POSTGRES_PASSWORD=argus123
+      - POSTGRES_DB=argus_auth
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    networks:
+      - argus-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U argus -d argus_auth"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ChromaDB - Vector Database for RAG
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: argus-chromadb-dev
+    ports:
+      - "8001:8000"
+    volumes:
+      - chroma_data_dev:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ANONYMIZED_TELEMETRY=FALSE
     networks:
       - argus-network
 
-  app:
+  # MCP Tool Server (Development)
+  mcp-server:
+    image: argus-mcp-server:dev
+    container_name: argus-mcp-server-dev
     build:
-      context: .
+      context: ./mcp-server
       dockerfile: Dockerfile.dev
-    container_name: argus-app-debug
-    command: >
-      sh -c "python -m debugpy --listen 0.0.0.0:5678 --wait-for-client -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
+    command: uvicorn main:app --host 0.0.0.0 --port 8002 --reload
     ports:
-      - "8000:8000"
-      - "5678:5678"
+      - "8002:8002"
+      - "5679:5678"  # debugpy port
     volumes:
-      - .:/app
-      - ./chroma_db:/app/chroma_db
+      - ./mcp-server:/app
     env_file:
       - .env
     environment:
@@ -42,8 +55,57 @@ services:
     networks:
       - argus-network
     depends_on:
-      - mcp-server
+      chromadb:
+        condition: service_started
+
+  # API (Development)
+  api:
+    image: argus-api:dev
+    container_name: argus-api-dev
+    build:
+      context: ./api
+      dockerfile: Dockerfile.dev
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+      - "5678:5678"  # debugpy port
+    volumes:
+      - ./api:/app
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+    networks:
+      - argus-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mcp-server:
+        condition: service_started
+
+  # UI (Development with hot-reload)
+  ui:
+    image: argus-ui:dev
+    container_name: argus-ui-dev
+    build:
+      context: ./ui
+      dockerfile: Dockerfile.dev
+    ports:
+      - "8080:80"
+      - "4200:4200"  # Angular dev server
+    volumes:
+      - ./ui:/app
+      - /app/node_modules  # Prevent overwriting node_modules
+    networks:
+      - argus-network
+    depends_on:
+      - api
 
 networks:
   argus-network:
     driver: bridge
+
+volumes:
+  chroma_data_dev:
+  postgres_data_dev:

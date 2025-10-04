@@ -4,8 +4,9 @@
 
 # Variables
 DOCKER_REGISTRY ?= southamerica-east1-docker.pkg.dev/tcloud-devops/tcloud-devops
-APP_IMAGE ?= argus-app
+API_IMAGE ?= argus-api
 MCP_IMAGE ?= argus-mcp-server
+UI_IMAGE ?= argus-ui
 VERSION ?= latest
 TIMESTAMP := $(shell date +%Y%m%d-%H%M%S)
 
@@ -35,74 +36,91 @@ dev-logs: ## View development logs
 docker-login: ## Login to GCP Artifact Registry
 	gcloud auth configure-docker southamerica-east1-docker.pkg.dev
 
-docker-build: ## Build production Docker images (app + mcp-server)
-	@echo "🔨 Building App image..."
-	docker build -f Dockerfile.app -t $(DOCKER_REGISTRY)/$(APP_IMAGE):$(VERSION) .
+docker-build: ## Build production Docker images (api + mcp-server + ui)
+	@echo "🔨 Building API image..."
+	docker build -f api/Dockerfile -t $(DOCKER_REGISTRY)/$(API_IMAGE):$(VERSION) ./api
 	@echo "🔨 Building MCP Server image..."
-	docker build -f Dockerfile.mcp -t $(DOCKER_REGISTRY)/$(MCP_IMAGE):$(VERSION) .
+	docker build -f mcp-server/Dockerfile -t $(DOCKER_REGISTRY)/$(MCP_IMAGE):$(VERSION) ./mcp-server
+	@echo "🔨 Building UI image..."
+	docker build -f ui/Dockerfile -t $(DOCKER_REGISTRY)/$(UI_IMAGE):$(VERSION) ./ui
 	@echo "✅ Images built successfully!"
 	@echo ""
 	@echo "Images created:"
-	@echo "  - $(DOCKER_REGISTRY)/$(APP_IMAGE):$(VERSION)"
+	@echo "  - $(DOCKER_REGISTRY)/$(API_IMAGE):$(VERSION)"
 	@echo "  - $(DOCKER_REGISTRY)/$(MCP_IMAGE):$(VERSION)"
+	@echo "  - $(DOCKER_REGISTRY)/$(UI_IMAGE):$(VERSION)"
 
 docker-build-dev: ## Build development Docker images
-	docker build -f Dockerfile.dev -t argus-app:dev .
-	docker build -f Dockerfile.dev -t argus-mcp-server:dev .
+	docker build -f api/Dockerfile.dev -t argus-api:dev ./api
+	docker build -f mcp-server/Dockerfile.dev -t argus-mcp-server:dev ./mcp-server
+	docker build -f ui/Dockerfile.dev -t argus-ui:dev ./ui
 
 docker-push: ## Push Docker images to GCP Artifact Registry
-	@echo "📤 Pushing App image..."
-	docker push $(DOCKER_REGISTRY)/$(APP_IMAGE):$(VERSION)
+	@echo "📤 Pushing API image..."
+	docker push $(DOCKER_REGISTRY)/$(API_IMAGE):$(VERSION)
 	@echo "📤 Pushing MCP Server image..."
 	docker push $(DOCKER_REGISTRY)/$(MCP_IMAGE):$(VERSION)
+	@echo "📤 Pushing UI image..."
+	docker push $(DOCKER_REGISTRY)/$(UI_IMAGE):$(VERSION)
 	@echo "✅ Images pushed successfully!"
 	@echo ""
 	@echo "Images available at:"
-	@echo "  - $(DOCKER_REGISTRY)/$(APP_IMAGE):$(VERSION)"
+	@echo "  - $(DOCKER_REGISTRY)/$(API_IMAGE):$(VERSION)"
 	@echo "  - $(DOCKER_REGISTRY)/$(MCP_IMAGE):$(VERSION)"
+	@echo "  - $(DOCKER_REGISTRY)/$(UI_IMAGE):$(VERSION)"
 
 docker-build-push: docker-build docker-push ## Build and push images in one command
 
 docker-build-timestamp: ## Build with timestamp tag (YYYYMMDD-HHMMSS)
 	@echo "🔨 Building with timestamp: $(TIMESTAMP)"
-	docker build -f Dockerfile.app -t $(DOCKER_REGISTRY)/$(APP_IMAGE):$(TIMESTAMP) .
-	docker build -f Dockerfile.mcp -t $(DOCKER_REGISTRY)/$(MCP_IMAGE):$(TIMESTAMP) .
+	docker build -f api/Dockerfile -t $(DOCKER_REGISTRY)/$(API_IMAGE):$(TIMESTAMP) ./api
+	docker build -f mcp-server/Dockerfile -t $(DOCKER_REGISTRY)/$(MCP_IMAGE):$(TIMESTAMP) ./mcp-server
+	docker build -f ui/Dockerfile -t $(DOCKER_REGISTRY)/$(UI_IMAGE):$(TIMESTAMP) ./ui
 	@echo "✅ Images built with timestamp!"
 	@echo ""
 	@echo "Images created:"
-	@echo "  - $(DOCKER_REGISTRY)/$(APP_IMAGE):$(TIMESTAMP)"
+	@echo "  - $(DOCKER_REGISTRY)/$(API_IMAGE):$(TIMESTAMP)"
 	@echo "  - $(DOCKER_REGISTRY)/$(MCP_IMAGE):$(TIMESTAMP)"
+	@echo "  - $(DOCKER_REGISTRY)/$(UI_IMAGE):$(TIMESTAMP)"
 
 docker-push-timestamp: ## Push images with timestamp tag
 	@echo "📤 Pushing images with timestamp: $(TIMESTAMP)"
-	docker push $(DOCKER_REGISTRY)/$(APP_IMAGE):$(TIMESTAMP)
+	docker push $(DOCKER_REGISTRY)/$(API_IMAGE):$(TIMESTAMP)
 	docker push $(DOCKER_REGISTRY)/$(MCP_IMAGE):$(TIMESTAMP)
+	docker push $(DOCKER_REGISTRY)/$(UI_IMAGE):$(TIMESTAMP)
 	@echo "✅ Images pushed successfully!"
 
 docker-build-push-timestamp: docker-build-timestamp docker-push-timestamp ## Build and push with timestamp in one command
 
 docker-build-dual: ## Build with both latest and timestamp tags
 	@echo "🔨 Building with tags: latest and $(TIMESTAMP)"
-	docker build -f Dockerfile.app \
-		-t $(DOCKER_REGISTRY)/$(APP_IMAGE):latest \
-		-t $(DOCKER_REGISTRY)/$(APP_IMAGE):$(TIMESTAMP) .
-	docker build -f Dockerfile.mcp \
+	docker build -f api/Dockerfile \
+		-t $(DOCKER_REGISTRY)/$(API_IMAGE):latest \
+		-t $(DOCKER_REGISTRY)/$(API_IMAGE):$(TIMESTAMP) ./api
+	docker build -f mcp-server/Dockerfile \
 		-t $(DOCKER_REGISTRY)/$(MCP_IMAGE):latest \
-		-t $(DOCKER_REGISTRY)/$(MCP_IMAGE):$(TIMESTAMP) .
+		-t $(DOCKER_REGISTRY)/$(MCP_IMAGE):$(TIMESTAMP) ./mcp-server
+	docker build -f ui/Dockerfile \
+		-t $(DOCKER_REGISTRY)/$(UI_IMAGE):latest \
+		-t $(DOCKER_REGISTRY)/$(UI_IMAGE):$(TIMESTAMP) ./ui
 	@echo "✅ Images built with dual tags!"
 	@echo ""
 	@echo "Images created:"
-	@echo "  - $(DOCKER_REGISTRY)/$(APP_IMAGE):latest"
-	@echo "  - $(DOCKER_REGISTRY)/$(APP_IMAGE):$(TIMESTAMP)"
+	@echo "  - $(DOCKER_REGISTRY)/$(API_IMAGE):latest"
+	@echo "  - $(DOCKER_REGISTRY)/$(API_IMAGE):$(TIMESTAMP)"
 	@echo "  - $(DOCKER_REGISTRY)/$(MCP_IMAGE):latest"
 	@echo "  - $(DOCKER_REGISTRY)/$(MCP_IMAGE):$(TIMESTAMP)"
+	@echo "  - $(DOCKER_REGISTRY)/$(UI_IMAGE):latest"
+	@echo "  - $(DOCKER_REGISTRY)/$(UI_IMAGE):$(TIMESTAMP)"
 
 docker-push-dual: ## Push both latest and timestamp tags
 	@echo "📤 Pushing images with dual tags..."
-	docker push $(DOCKER_REGISTRY)/$(APP_IMAGE):latest
-	docker push $(DOCKER_REGISTRY)/$(APP_IMAGE):$(TIMESTAMP)
+	docker push $(DOCKER_REGISTRY)/$(API_IMAGE):latest
+	docker push $(DOCKER_REGISTRY)/$(API_IMAGE):$(TIMESTAMP)
 	docker push $(DOCKER_REGISTRY)/$(MCP_IMAGE):latest
 	docker push $(DOCKER_REGISTRY)/$(MCP_IMAGE):$(TIMESTAMP)
+	docker push $(DOCKER_REGISTRY)/$(UI_IMAGE):latest
+	docker push $(DOCKER_REGISTRY)/$(UI_IMAGE):$(TIMESTAMP)
 	@echo "✅ All images pushed successfully!"
 
 docker-release: docker-login docker-build-dual docker-push-dual ## Complete release: login + build + push (latest + timestamp)
@@ -110,18 +128,22 @@ docker-release: docker-login docker-build-dual docker-push-dual ## Complete rele
 	@echo "🎉 Release complete!"
 	@echo ""
 	@echo "Images available at:"
-	@echo "  - $(DOCKER_REGISTRY)/$(APP_IMAGE):latest"
-	@echo "  - $(DOCKER_REGISTRY)/$(APP_IMAGE):$(TIMESTAMP)"
+	@echo "  - $(DOCKER_REGISTRY)/$(API_IMAGE):latest"
+	@echo "  - $(DOCKER_REGISTRY)/$(API_IMAGE):$(TIMESTAMP)"
 	@echo "  - $(DOCKER_REGISTRY)/$(MCP_IMAGE):latest"
 	@echo "  - $(DOCKER_REGISTRY)/$(MCP_IMAGE):$(TIMESTAMP)"
+	@echo "  - $(DOCKER_REGISTRY)/$(UI_IMAGE):latest"
+	@echo "  - $(DOCKER_REGISTRY)/$(UI_IMAGE):$(TIMESTAMP)"
 
 docker-tag: ## Tag images with custom version (usage: make docker-tag VERSION=v1.0.0)
-	docker tag $(DOCKER_REGISTRY)/$(APP_IMAGE):latest $(DOCKER_REGISTRY)/$(APP_IMAGE):$(VERSION)
+	docker tag $(DOCKER_REGISTRY)/$(API_IMAGE):latest $(DOCKER_REGISTRY)/$(API_IMAGE):$(VERSION)
 	docker tag $(DOCKER_REGISTRY)/$(MCP_IMAGE):latest $(DOCKER_REGISTRY)/$(MCP_IMAGE):$(VERSION)
+	docker tag $(DOCKER_REGISTRY)/$(UI_IMAGE):latest $(DOCKER_REGISTRY)/$(UI_IMAGE):$(VERSION)
 
 docker-pull: ## Pull images from registry
-	docker pull $(DOCKER_REGISTRY)/$(APP_IMAGE):$(VERSION)
+	docker pull $(DOCKER_REGISTRY)/$(API_IMAGE):$(VERSION)
 	docker pull $(DOCKER_REGISTRY)/$(MCP_IMAGE):$(VERSION)
+	docker pull $(DOCKER_REGISTRY)/$(UI_IMAGE):$(VERSION)
 
 # Kubernetes - Development
 k8s-dev-deploy: ## Deploy to Kubernetes development environment
@@ -133,10 +155,10 @@ k8s-dev-delete: ## Delete Kubernetes development deployment
 	kubectl delete -f k8s/dev/
 
 k8s-dev-logs: ## View Kubernetes development logs
-	kubectl logs -n argus-dev -l app=argus-app --tail=100 -f
+	kubectl logs -n argus-dev -l app=argus-api --tail=100 -f
 
 k8s-dev-port-forward: ## Port forward to development deployment
-	kubectl port-forward -n argus-dev svc/argus-app 8000:8000
+	kubectl port-forward -n argus-dev svc/argus-api 8000:8000
 
 create-k8s-secret: ## Create Kubernetes secret from .env file (development)
 	@echo "Creating Kubernetes secret in argus-dev namespace from .env..."
@@ -211,19 +233,19 @@ tilt-ci: ## Run Tilt in CI mode
 
 # Testing
 test: ## Run tests
-	docker-compose run --rm app pytest -v
+	docker-compose run --rm api pytest -v
 
 test-cov: ## Run tests with coverage
-	docker-compose run --rm app pytest --cov=app --cov-report=html
+	docker-compose run --rm api pytest --cov=app --cov-report=html
 
 lint: ## Run linting
-	docker-compose run --rm app ruff check .
+	docker-compose run --rm api ruff check .
 
 format: ## Format code
-	docker-compose run --rm app black .
+	docker-compose run --rm api black .
 
 type-check: ## Run type checking
-	docker-compose run --rm app mypy .
+	docker-compose run --rm api mypy .
 
 # Cleanup
 clean: ## Clean up build artifacts and caches

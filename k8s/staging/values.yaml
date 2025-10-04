@@ -53,7 +53,7 @@ ingress:
           - path: /
             pathType: Prefix
     tls:
-      - secretName: argus-app-staging-tls
+      - secretName: argus-api-staging-tls
         hosts:
           - argus-staging.example.com
 

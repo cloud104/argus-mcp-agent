@@ -1,8 +1,8 @@
-# Multi-stage build for MCP Server (production)
-# Imagem otimizada contendo apenas código e dependências do MCP Server
+# Multi-stage build for Main Application (production)
+# Imagem otimizada contendo apenas código e dependências da aplicação principal
 
 # Stage 1: Builder
-FROM python:3.13-slim as builder
+FROM python:3.13-slim AS builder
 
 WORKDIR /app
 
@@ -16,12 +16,14 @@ RUN apt-get update && apt-get install -y \
 # Install uv for faster package management
 RUN pip install --no-cache-dir uv
 
-# Copy requirements and install dependencies
-COPY requirements-mcp.txt .
-RUN uv pip install --system --no-cache-dir -r requirements-mcp.txt
+# Copy requirements and install dependencies (only what app needs)
+COPY requirements.txt .
+RUN uv pip install --system --no-cache-dir -r requirements.txt
 
-# Copy only what the MCP server needs (exclude app/, prompts/)
-COPY tools/ ./tools/
+# Copy only what the app needs (exclude tools/)
+COPY main.py .
+COPY app/ ./app/
+COPY prompts/ ./prompts/
 COPY config/ ./config/
 
 # Stage 2: Production image with Python slim (not distroless due to binary dependencies)
@@ -43,7 +45,9 @@ ENV PYTHONDONTWRITEBYTECODE=1
 
 # Copy application code (only what's needed)
 WORKDIR /app
-COPY --from=builder /app/tools ./tools
+COPY --from=builder /app/main.py ./main.py
+COPY --from=builder /app/app ./app
+COPY --from=builder /app/prompts ./prompts
 COPY --from=builder /app/config ./config
 
 # Create non-root user
@@ -51,7 +55,7 @@ RUN useradd -m -u 65532 -s /bin/bash nonroot && chown -R nonroot:nonroot /app
 USER nonroot
 
 # Expose port
-EXPOSE 8002
+EXPOSE 8000
 
-# Start the MCP server
-CMD ["uvicorn", "tools.server:app", "--host", "0.0.0.0", "--port", "8002"]
+# Start the main application
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
