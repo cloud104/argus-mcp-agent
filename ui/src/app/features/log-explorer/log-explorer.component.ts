@@ -45,6 +45,7 @@ export class LogExplorerComponent implements OnInit, OnDestroy {
   logExplanation = signal<string>('');
   showChat = signal(false);
   chatMessages = signal<Array<{text: string, sender: 'user' | 'ai'}>>([]);
+  showExportMenu = signal(false);
 
   // Computed
   filteredLogs = computed(() => {
@@ -70,6 +71,39 @@ export class LogExplorerComponent implements OnInit, OnDestroy {
     });
   });
 
+  // Quick filters computed from logs
+  quickFilters = computed(() => {
+    const logs = this.allLogs();
+    if (logs.length === 0) return { severities: [], appnames: [], hosts: [] };
+
+    const severities = new Set<string>();
+    const appnames = new Map<string, number>();
+    const hosts = new Map<string, number>();
+
+    logs.forEach(log => {
+      if (log.severity) severities.add(log.severity);
+      if (log.appname) {
+        appnames.set(log.appname, (appnames.get(log.appname) || 0) + 1);
+      }
+      if (log['host']) {
+        const shortHost = log['host'].split('(')[0]; // Extract short hostname
+        hosts.set(shortHost, (hosts.get(shortHost) || 0) + 1);
+      }
+    });
+
+    return {
+      severities: Array.from(severities).sort(),
+      appnames: Array.from(appnames.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([name]) => name),
+      hosts: Array.from(hosts.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([name]) => name)
+    };
+  });
+
   constructor(
     private fb: FormBuilder,
     private authService: AuthService,
@@ -77,13 +111,16 @@ export class LogExplorerComponent implements OnInit, OnDestroy {
     private router: Router
   ) {
     // Initialize form with default values
-    const twoHoursAgo = new Date();
-    twoHoursAgo.setHours(twoHoursAgo.getHours() - 2);
+    // Use last 7 days as default range
+    const now = new Date();
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
     this.searchForm = this.fb.group({
       ccode: ['csalva7', [Validators.required]],
       topology: ['203089', [Validators.required]],
-      datetime: [twoHoursAgo.toISOString().slice(0, 16), [Validators.required]]
+      startDate: [sevenDaysAgo.toISOString().slice(0, 16), [Validators.required]],
+      endDate: [now.toISOString().slice(0, 16), [Validators.required]]
     });
 
     // Update chart when filtered logs change
@@ -110,14 +147,15 @@ export class LogExplorerComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const { ccode, topology, datetime } = this.searchForm.value;
+    const { ccode, topology, startDate, endDate } = this.searchForm.value;
     const index = `${ccode}_${topology}_logs`;
 
-    // Calculate time window
-    const selectedDate = new Date(datetime);
-    const now = new Date();
-    const diffMs = now.getTime() - selectedDate.getTime();
-    const window = `${Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60)))}h`;
+    // Calculate time window from date range
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const diffMs = end.getTime() - start.getTime();
+    const diffHours = Math.ceil(diffMs / (1000 * 60 * 60));
+    const window = `${Math.max(1, diffHours)}h`;
 
     this.currentIndex.set(index);
     this.currentWindow.set(window);
@@ -328,6 +366,10 @@ export class LogExplorerComponent implements OnInit, OnDestroy {
     this.authService.logout();
   }
 
+  navigateToAdmin(): void {
+    this.router.navigate(['/admin/users']);
+  }
+
   /**
    * Copy text to clipboard
    */
@@ -355,6 +397,126 @@ export class LogExplorerComponent implements OnInit, OnDestroy {
     if (['EMERG', 'ERROR', 'FATAL', 'CRITICAL'].includes(sev)) return 'severity-error';
     if (sev === 'WARNING') return 'severity-warning';
     return 'severity-info';
+  }
+
+  /**
+   * Toggle quick filter (add or remove)
+   */
+  toggleQuickFilter(field: string, value: string): void {
+    const filterValue = `${field}:${value}`;
+    const currentPills = this.filterPills();
+    const existingIndex = currentPills.findIndex(p => p.value === filterValue);
+
+    if (existingIndex >= 0) {
+      // Remove filter
+      this.filterPills.set(currentPills.filter((_, i) => i !== existingIndex));
+    } else {
+      // Add filter
+      this.filterPills.set([...currentPills, { value: filterValue, label: `${field}: ${value}` }]);
+    }
+  }
+
+  /**
+   * Check if quick filter is active
+   */
+  isFilterActive(field: string, value: string): boolean {
+    const filterValue = `${field}:${value}`;
+    return this.filterPills().some(p => p.value === filterValue);
+  }
+
+  /**
+   * Toggle export menu
+   */
+  toggleExportMenu(): void {
+    this.showExportMenu.update(v => !v);
+  }
+
+  /**
+   * Export analysis to file
+   */
+  exportAnalysis(format: 'markdown' | 'json'): void {
+    const analysis = this.deepDiveAnalysis();
+    const logs = this.filteredLogs();
+    const timestamp = new Date().toISOString().split('T')[0];
+    const filename = `argus-analysis-${this.currentIndex()}-${timestamp}`;
+
+    let content: string;
+    let mimeType: string;
+    let extension: string;
+
+    if (format === 'markdown') {
+      content = this.generateMarkdown(analysis, logs);
+      mimeType = 'text/markdown';
+      extension = 'md';
+    } else {
+      content = JSON.stringify({
+        metadata: {
+          index: this.currentIndex(),
+          window: this.currentWindow(),
+          timestamp: new Date().toISOString(),
+          totalLogs: logs.length
+        },
+        analysis,
+        logs: logs.slice(0, 50) // Include first 50 logs
+      }, null, 2);
+      mimeType = 'application/json';
+      extension = 'json';
+    }
+
+    // Create and download file
+    const blob = new Blob([content], { type: mimeType });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${filename}.${extension}`;
+    link.click();
+    window.URL.revokeObjectURL(url);
+
+    this.showExportMenu.set(false);
+  }
+
+  /**
+   * Generate Markdown from analysis
+   */
+  private generateMarkdown(analysis: any, logs: any[]): string {
+    const timestamp = new Date().toISOString();
+    let md = `# Argus Log Analysis Report\n\n`;
+    md += `**Date:** ${timestamp}\n`;
+    md += `**Index:** ${this.currentIndex()}\n`;
+    md += `**Window:** ${this.currentWindow()}\n`;
+    md += `**Total Logs:** ${logs.length}\n\n`;
+    md += `---\n\n`;
+
+    if (analysis.resumo_analitico) {
+      md += `## 📋 Resumo Analítico\n\n${analysis.resumo_analitico}\n\n`;
+    }
+
+    if (analysis.hipotese_causa_raiz) {
+      md += `## 🔍 Hipótese de Causa Raiz\n\n${analysis.hipotese_causa_raiz}\n\n`;
+    }
+
+    if (analysis.acoes_recomendadas && analysis.acoes_recomendadas.length > 0) {
+      md += `## ✅ Ações Recomendadas\n\n`;
+      analysis.acoes_recomendadas.forEach((action: string, i: number) => {
+        md += `${i + 1}. ${action}\n`;
+      });
+      md += `\n`;
+    }
+
+    // Add sample logs
+    md += `## 📊 Amostra de Logs (primeiros 10)\n\n`;
+    logs.slice(0, 10).forEach((log, i) => {
+      md += `### Log ${i + 1}\n`;
+      md += `- **Timestamp:** ${log.timestamp}\n`;
+      md += `- **Severity:** ${log.severity}\n`;
+      md += `- **Appname:** ${log.appname}\n`;
+      md += `- **Message:** ${log.message}\n\n`;
+    });
+
+    md += `---\n\n`;
+    md += `*Gerado por Argus Log Explorer*\n`;
+
+    return md;
   }
 
   /**

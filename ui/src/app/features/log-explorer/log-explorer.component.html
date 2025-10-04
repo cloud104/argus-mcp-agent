@@ -16,6 +16,14 @@
         Análise IA
       </button>
       @if (currentUser | async; as user) {
+        @if (user.role === 'admin') {
+          <button class="totvs-btn totvs-btn--ghost" (click)="navigateToAdmin()">
+            <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+            </svg>
+            Admin
+          </button>
+        }
         <div class="user-menu">
           <div class="user-avatar">{{ user.username.charAt(0).toUpperCase() }}</div>
           <span class="user-name">{{ user.username }}</span>
@@ -58,11 +66,21 @@
           </div>
 
           <div class="totvs-form-group">
-            <label for="datetime">Janela de Tempo</label>
+            <label for="startDate">Data Inicial</label>
             <input
               type="datetime-local"
-              id="datetime"
-              formControlName="datetime"
+              id="startDate"
+              formControlName="startDate"
+              class="totvs-input"
+            />
+          </div>
+
+          <div class="totvs-form-group">
+            <label for="endDate">Data Final</label>
+            <input
+              type="datetime-local"
+              id="endDate"
+              formControlName="endDate"
               class="totvs-input"
             />
           </div>
@@ -125,6 +143,48 @@
               <div class="totvs-pill totvs-pill--primary">
                 <span>{{ pill.label }}</span>
                 <button class="remove-btn" (click)="removeFilter(i)">&times;</button>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- Quick Filters -->
+        @if (quickFilters().severities.length > 0 || quickFilters().appnames.length > 0) {
+          <div class="quick-filters">
+            @if (quickFilters().severities.length > 0) {
+              <div class="quick-filter-group">
+                <span class="quick-filter-label">Severity:</span>
+                <div class="quick-filter-badges">
+                  @for (severity of quickFilters().severities; track severity) {
+                    <button
+                      class="quick-filter-badge"
+                      [class.active]="isFilterActive('severity', severity)"
+                      [class.severity-error]="['EMERG','ERROR','FATAL','CRITICAL'].includes(severity)"
+                      [class.severity-warning]="severity === 'WARNING'"
+                      [class.severity-info]="!['EMERG','ERROR','FATAL','CRITICAL','WARNING'].includes(severity)"
+                      (click)="toggleQuickFilter('severity', severity)"
+                    >
+                      {{ severity }}
+                    </button>
+                  }
+                </div>
+              </div>
+            }
+
+            @if (quickFilters().appnames.length > 0) {
+              <div class="quick-filter-group">
+                <span class="quick-filter-label">Appname:</span>
+                <div class="quick-filter-badges">
+                  @for (appname of quickFilters().appnames; track appname) {
+                    <button
+                      class="quick-filter-badge"
+                      [class.active]="isFilterActive('appname', appname)"
+                      (click)="toggleQuickFilter('appname', appname)"
+                    >
+                      {{ appname }}
+                    </button>
+                  }
+                </div>
               </div>
             }
           </div>
@@ -232,12 +292,38 @@
         <div class="analysis-result">
           <div class="flex justify-between items-center mb-3">
             <h3 class="totvs-heading--5">Resultado da Análise</h3>
-            <button class="totvs-btn totvs-btn--ghost totvs-btn--sm" (click)="startChat()">
-              <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
-              </svg>
-              Conversar sobre
-            </button>
+            <div class="flex gap-2">
+              <div class="export-dropdown">
+                <button class="totvs-btn totvs-btn--ghost totvs-btn--sm" (click)="toggleExportMenu()">
+                  <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                  </svg>
+                  Export
+                </button>
+                @if (showExportMenu()) {
+                  <div class="export-menu">
+                    <button (click)="exportAnalysis('markdown')">
+                      <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                      </svg>
+                      Markdown (.md)
+                    </button>
+                    <button (click)="exportAnalysis('json')">
+                      <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+                      </svg>
+                      JSON (.json)
+                    </button>
+                  </div>
+                }
+              </div>
+              <button class="totvs-btn totvs-btn--ghost totvs-btn--sm" (click)="startChat()">
+                <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                </svg>
+                Conversar sobre
+              </button>
+            </div>
           </div>
 
           @if (deepDiveAnalysis().resumo_analitico) {

@@ -1,0 +1,367 @@
+@import '../../../../styles/totvs-theme';
+
+.user-management-container {
+  padding: $totvs-spacing-xl;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+// Header
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: $totvs-spacing-xl;
+
+  .header-left {
+    display: flex;
+    align-items: flex-start;
+    gap: $totvs-spacing-md;
+
+    .back-btn {
+      margin-top: 4px;
+    }
+
+    .page-title {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 600;
+      color: $totvs-gray-900;
+    }
+
+    .page-subtitle {
+      margin: $totvs-spacing-xs 0 0 0;
+      color: $totvs-gray-600;
+      font-size: 14px;
+    }
+  }
+
+  .icon {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+// Alerts
+.totvs-alert {
+  margin-bottom: $totvs-spacing-lg;
+  padding: $totvs-spacing-md;
+  border-radius: $totvs-radius-md;
+  animation: fadeInDown 0.3s ease;
+
+  &--success {
+    background: #d1fae5;
+    color: #065f46;
+    border: 1px solid #6ee7b7;
+  }
+
+  &--danger {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fca5a5;
+  }
+}
+
+// Users Card
+.users-card {
+  background: white;
+  border-radius: $totvs-radius-lg;
+  box-shadow: $totvs-shadow-md;
+  overflow: hidden;
+}
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: $totvs-spacing-2xl;
+  color: $totvs-gray-600;
+
+  p {
+    margin-top: $totvs-spacing-md;
+  }
+}
+
+// Table
+.table-container {
+  overflow-x: auto;
+}
+
+.users-table {
+  width: 100%;
+  border-collapse: collapse;
+
+  thead {
+    background: $totvs-gray-50;
+    border-bottom: 2px solid $totvs-gray-200;
+
+    th {
+      padding: $totvs-spacing-md;
+      text-align: left;
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      color: $totvs-gray-700;
+      letter-spacing: 0.05em;
+
+      &.actions-column {
+        text-align: center;
+        width: 120px;
+      }
+    }
+  }
+
+  tbody {
+    tr {
+      border-bottom: 1px solid $totvs-gray-200;
+      transition: background-color 0.2s ease;
+
+      &:hover {
+        background: $totvs-gray-50;
+      }
+
+      &.disabled-row {
+        opacity: 0.6;
+        background: $totvs-gray-50;
+      }
+
+      td {
+        padding: $totvs-spacing-md;
+        font-size: 14px;
+        color: $totvs-gray-900;
+
+        &.actions-column {
+          text-align: center;
+        }
+
+        &.empty-state {
+          text-align: center;
+          padding: $totvs-spacing-2xl;
+          color: $totvs-gray-500;
+        }
+      }
+    }
+  }
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: $totvs-spacing-sm;
+
+  .user-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: $totvs-primary;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 14px;
+  }
+}
+
+.role-select {
+  padding: 6px 12px;
+  border: 1px solid $totvs-gray-300;
+  border-radius: $totvs-radius-sm;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    border-color: $totvs-primary;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: $totvs-radius-full;
+  font-size: 12px;
+  font-weight: 500;
+
+  &.badge-active {
+    background: #d1fae5;
+    color: #065f46;
+  }
+
+  &.badge-disabled {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+}
+
+.action-buttons {
+  display: flex;
+  gap: $totvs-spacing-xs;
+  justify-content: center;
+
+  .icon {
+    width: 18px;
+    height: 18px;
+  }
+
+  .btn-delete:hover {
+    color: #dc2626;
+  }
+}
+
+// Modal
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+.modal-content {
+  background: white;
+  border-radius: $totvs-radius-lg;
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  animation: fadeInUp 0.3s ease;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: $totvs-spacing-lg;
+  border-bottom: 1px solid $totvs-gray-200;
+
+  h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: $totvs-gray-900;
+  }
+
+  .close-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: $totvs-spacing-xs;
+    color: $totvs-gray-500;
+    transition: color 0.2s ease;
+
+    svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    &:hover {
+      color: $totvs-gray-900;
+    }
+  }
+}
+
+.modal-body {
+  padding: $totvs-spacing-lg;
+
+  .totvs-form-group {
+    margin-bottom: $totvs-spacing-md;
+
+    label {
+      display: block;
+      margin-bottom: $totvs-spacing-xs;
+      font-weight: 500;
+      font-size: 14px;
+      color: $totvs-gray-700;
+    }
+
+    .error-text {
+      display: block;
+      margin-top: $totvs-spacing-xs;
+      color: #dc2626;
+      font-size: 12px;
+    }
+  }
+}
+
+.modal-footer {
+  display: flex;
+  gap: $totvs-spacing-sm;
+  justify-content: flex-end;
+  padding: $totvs-spacing-lg;
+  border-top: 1px solid $totvs-gray-200;
+}
+
+// Animations
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Responsive
+@media (max-width: 768px) {
+  .user-management-container {
+    padding: $totvs-spacing-md;
+  }
+
+  .page-header {
+    flex-direction: column;
+    gap: $totvs-spacing-md;
+
+    button {
+      width: 100%;
+    }
+  }
+
+  .table-container {
+    overflow-x: scroll;
+  }
+
+  .users-table {
+    min-width: 800px;
+  }
+
+  .modal-content {
+    width: 95%;
+    margin: $totvs-spacing-md;
+  }
+}

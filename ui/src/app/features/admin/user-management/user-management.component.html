@@ -1,0 +1,211 @@
+<div class="user-management-container">
+  <!-- Header -->
+  <div class="page-header">
+    <div class="header-left">
+      <button class="totvs-btn totvs-btn--ghost back-btn" (click)="goBack()">
+        <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+        </svg>
+        Voltar
+      </button>
+      <div>
+        <h1 class="page-title">Gerenciamento de Usuários</h1>
+        <p class="page-subtitle">Gerencie usuários, roles e permissões do sistema</p>
+      </div>
+    </div>
+    <button class="totvs-btn totvs-btn--primary" (click)="openCreateModal()">
+      <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+      </svg>
+      Novo Usuário
+    </button>
+  </div>
+
+  <!-- Messages -->
+  @if (successMessage()) {
+    <div class="totvs-alert totvs-alert--success">
+      {{ successMessage() }}
+    </div>
+  }
+
+  @if (errorMessage()) {
+    <div class="totvs-alert totvs-alert--danger">
+      {{ errorMessage() }}
+    </div>
+  }
+
+  <!-- Users Table -->
+  <div class="users-card totvs-card">
+    @if (isLoading() && users().length === 0) {
+      <div class="loading-state">
+        <div class="totvs-spinner"></div>
+        <p>Carregando usuários...</p>
+      </div>
+    } @else {
+      <div class="table-container">
+        <table class="users-table">
+          <thead>
+            <tr>
+              <th>Usuário</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Criado em</th>
+              <th class="actions-column">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (user of users(); track user.username) {
+              <tr [class.disabled-row]="user.disabled">
+                <td>
+                  <div class="user-info">
+                    <div class="user-avatar">{{ user.username.charAt(0).toUpperCase() }}</div>
+                    <strong>{{ user.username }}</strong>
+                  </div>
+                </td>
+                <td>{{ user.email }}</td>
+                <td>
+                  <select
+                    class="role-select"
+                    [value]="user.role"
+                    (change)="updateUserRole(user, $any($event.target).value)"
+                    [disabled]="user.disabled"
+                  >
+                    <option value="viewer">Viewer</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </td>
+                <td>
+                  <span class="status-badge" [ngClass]="getStatusBadgeClass(user.disabled)">
+                    {{ user.disabled ? 'Desativado' : 'Ativo' }}
+                  </span>
+                </td>
+                <td>{{ user.created_at | date:'dd/MM/yyyy HH:mm' }}</td>
+                <td class="actions-column">
+                  <div class="action-buttons">
+                    <button
+                      class="totvs-btn totvs-btn--ghost totvs-btn--sm"
+                      (click)="toggleUserStatus(user)"
+                      [title]="user.disabled ? 'Ativar usuário' : 'Desativar usuário'"
+                    >
+                      <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        @if (user.disabled) {
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        } @else {
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                        }
+                      </svg>
+                    </button>
+                    <button
+                      class="totvs-btn totvs-btn--ghost totvs-btn--sm btn-delete"
+                      (click)="deleteUser(user)"
+                      title="Excluir usuário"
+                    >
+                      <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                      </svg>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="6" class="empty-state">
+                  Nenhum usuário encontrado
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+
+  <!-- Create User Modal -->
+  @if (showCreateModal()) {
+    <div class="modal-overlay" (click)="closeCreateModal()">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>Criar Novo Usuário</h2>
+          <button class="close-btn" (click)="closeCreateModal()">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+
+        <form [formGroup]="createUserForm" (ngSubmit)="onCreateUser()">
+          <div class="modal-body">
+            <div class="totvs-form-group">
+              <label for="username">Usuário *</label>
+              <input
+                type="text"
+                id="username"
+                formControlName="username"
+                class="totvs-input"
+                placeholder="Digite o username"
+              />
+              @if (createUserForm.get('username')?.invalid && createUserForm.get('username')?.touched) {
+                <small class="error-text">Usuário deve ter no mínimo 3 caracteres</small>
+              }
+            </div>
+
+            <div class="totvs-form-group">
+              <label for="email">Email *</label>
+              <input
+                type="email"
+                id="email"
+                formControlName="email"
+                class="totvs-input"
+                placeholder="Digite o email"
+              />
+              @if (createUserForm.get('email')?.invalid && createUserForm.get('email')?.touched) {
+                <small class="error-text">Email inválido</small>
+              }
+            </div>
+
+            <div class="totvs-form-group">
+              <label for="password">Senha *</label>
+              <input
+                type="password"
+                id="password"
+                formControlName="password"
+                class="totvs-input"
+                placeholder="Digite a senha"
+              />
+              @if (createUserForm.get('password')?.invalid && createUserForm.get('password')?.touched) {
+                <small class="error-text">Senha deve ter no mínimo 6 caracteres</small>
+              }
+            </div>
+
+            <div class="totvs-form-group">
+              <label for="role">Role *</label>
+              <select id="role" formControlName="role" class="totvs-input">
+                <option value="viewer">Viewer</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="totvs-btn totvs-btn--ghost" (click)="closeCreateModal()">
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              class="totvs-btn totvs-btn--primary"
+              [disabled]="createUserForm.invalid || isLoading()"
+            >
+              @if (isLoading()) {
+                <div class="totvs-spinner totvs-spinner--sm"></div>
+                <span>Criando...</span>
+              } @else {
+                <span>Criar Usuário</span>
+              }
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+</div>
