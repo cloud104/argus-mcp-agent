@@ -12,32 +12,57 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: $totvs-spacing-sm $totvs-spacing-lg;
+  padding: 1rem 2rem;
   border-radius: 0;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  background: #001489;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   flex-shrink: 0;
   transition: all 0.2s ease;
+
+  // Buttons no header ficam brancos/transparentes
+  .totvs-btn--ghost {
+    color: white;
+    border-color: transparent;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    svg {
+      stroke: white;
+    }
+  }
+
+  .totvs-btn--icon {
+    color: white;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    svg {
+      stroke: white;
+    }
+  }
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: $totvs-spacing-sm;
+  gap: 2rem;
 
   .logo-image {
-    height: 36px;
+    height: 32px;
     width: auto;
-    max-width: 140px;
-    margin-right: 0.5rem;
+    max-width: 180px;
   }
 
   h1 {
     margin: 0;
     font-size: 18px;
-    color: $totvs-gray-900;
+    font-weight: 400;
+    color: white;
   }
 }
 
@@ -56,6 +81,8 @@
   display: flex;
   align-items: center;
   gap: $totvs-spacing-sm;
+  padding-left: $totvs-spacing-md;
+  border-left: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .user-avatar {
@@ -81,8 +108,59 @@
 .user-name {
   font-size: 14px;
   font-weight: 500;
-  color: $totvs-gray-700;
+  color: white;
   transition: color 0.2s ease;
+}
+
+// Botão de logout melhorado
+.logout-btn {
+  position: relative;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 8px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s ease;
+  }
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+
+    &::before {
+      left: 100%;
+    }
+
+    .icon {
+      transform: scale(1.1);
+      stroke: #ff6b6b;
+    }
+  }
+
+  &:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  }
+
+  .icon {
+    width: 20px;
+    height: 20px;
+    transition: all 0.3s ease;
+    stroke: white;
+    stroke-width: 2;
+  }
 }
 
 // Main Content

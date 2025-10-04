@@ -1,8 +1,8 @@
 <div class="log-explorer-container">
   <!-- Header -->
-  <header class="header totvs-card">
+  <header class="header">
     <div class="header-left">
-      <img src="/assets/images/logo.svg" alt="TOTVS" class="logo-image">
+      <img src="/assets/images/logotipo-oficial.png" alt="TOTVS" class="logo-image">
       <h1 class="totvs-heading--3">Argus Log Explorer</h1>
     </div>
     <div class="header-right">
@@ -30,7 +30,7 @@
         <div class="user-menu">
           <div class="user-avatar">{{ user.username.charAt(0).toUpperCase() }}</div>
           <span class="user-name">{{ user.username }}</span>
-          <button class="totvs-btn totvs-btn--icon" (click)="logout()" title="Sair">
+          <button class="totvs-btn totvs-btn--icon logout-btn" (click)="logout()" title="Sair">
             <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
             </svg>

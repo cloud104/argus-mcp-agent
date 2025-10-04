@@ -1,41 +1,43 @@
 <div class="user-management-container">
   <!-- Header -->
-  <div class="page-header">
+  <header class="header">
     <div class="header-left">
-      <button class="totvs-btn totvs-btn--ghost back-btn" (click)="goBack()">
-        <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+      <img src="/assets/images/logotipo-oficial.png" alt="TOTVS" class="logo-image">
+      <button class="back-button" (click)="goBack()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M19 12H5M12 19l-7-7 7-7"/>
         </svg>
         Voltar
       </button>
-      <div>
-        <h1 class="page-title">Gerenciamento de Usuários</h1>
-        <p class="page-subtitle">Gerencie usuários, roles e permissões do sistema</p>
+      <h1>Gerenciamento de Usuários</h1>
+    </div>
+    <div class="header-right">
+      <button class="totvs-btn totvs-btn--primary" (click)="openCreateModal()">
+        <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        Novo Usuário
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <!-- Messages -->
+    @if (successMessage()) {
+      <div class="totvs-alert totvs-alert--success">
+        {{ successMessage() }}
       </div>
-    </div>
-    <button class="totvs-btn totvs-btn--primary" (click)="openCreateModal()">
-      <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-      </svg>
-      Novo Usuário
-    </button>
-  </div>
+    }
 
-  <!-- Messages -->
-  @if (successMessage()) {
-    <div class="totvs-alert totvs-alert--success">
-      {{ successMessage() }}
-    </div>
-  }
+    @if (errorMessage()) {
+      <div class="totvs-alert totvs-alert--danger">
+        {{ errorMessage() }}
+      </div>
+    }
 
-  @if (errorMessage()) {
-    <div class="totvs-alert totvs-alert--danger">
-      {{ errorMessage() }}
-    </div>
-  }
-
-  <!-- Users Table -->
-  <div class="users-card totvs-card">
+    <!-- Users Table -->
+    <div class="users-card totvs-card">
     @if (isLoading() && users().length === 0) {
       <div class="loading-state">
         <div class="totvs-spinner"></div>
@@ -208,4 +210,5 @@
       </div>
     </div>
   }
+  </main>
 </div>

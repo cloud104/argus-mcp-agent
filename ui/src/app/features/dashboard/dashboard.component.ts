@@ -2,6 +2,9 @@ import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { MetricsService, DashboardMetrics } from '../../core/services/metrics.service';
+import { AuthService } from '../../core/auth/auth.service';
+import { Observable } from 'rxjs';
+import { User } from '../../core/auth/auth.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -15,6 +18,7 @@ export class DashboardComponent implements OnInit {
   isLoading = signal(false);
   errorMessage = signal<string | null>(null);
   selectedWindow = signal('7d');
+  currentUser: Observable<User | null>;
 
   windows = [
     { label: '24 Horas', value: '24h' },
@@ -24,8 +28,11 @@ export class DashboardComponent implements OnInit {
 
   constructor(
     private metricsService: MetricsService,
-    private router: Router
-  ) {}
+    private router: Router,
+    private authService: AuthService
+  ) {
+    this.currentUser = this.authService.currentUser$;
+  }
 
   ngOnInit(): void {
     this.loadMetrics();
@@ -54,6 +61,10 @@ export class DashboardComponent implements OnInit {
 
   goBack(): void {
     this.router.navigate(['/']);
+  }
+
+  logout(): void {
+    this.authService.logout();
   }
 
   getSeverityKeys(): string[] {

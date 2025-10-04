@@ -5,14 +5,53 @@
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #0033A0 0%, #0066CC 100%);
+  background: linear-gradient(135deg, #001489 0%, #0033A0 50%, #0066CC 100%);
   padding: $totvs-spacing-lg;
+  position: relative;
+  overflow: hidden;
+
+  // Efeito de partículas/ondas no fundo
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+      radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
+      radial-gradient(circle at 40% 40%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
+    animation: float 6s ease-in-out infinite;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: 
+      linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.03) 50%, transparent 70%);
+    animation: rotate 20s linear infinite;
+  }
 }
 
 .login-card {
   max-width: 450px;
   width: 100%;
   animation: slideUp 0.4s ease;
+  position: relative;
+  z-index: 10;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border-radius: 24px;
+  box-shadow: 
+    0 25px 50px -12px rgba(0, 0, 0, 0.25),
+    0 0 0 1px rgba(255, 255, 255, 0.2);
+  padding: 3rem 2.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .login-header {
@@ -23,50 +62,141 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    margin-bottom: $totvs-spacing-lg;
-    padding: $totvs-spacing-md;
-    background: rgba(0, 51, 160, 0.05);
-    border-radius: 12px;
+    margin-bottom: $totvs-spacing-xl;
+    padding: $totvs-spacing-lg;
+    background: linear-gradient(135deg, #001489 0%, #0033A0 100%);
+    border-radius: 20px;
+    box-shadow: 
+      0 10px 25px -5px rgba(0, 20, 137, 0.3),
+      0 4px 6px -2px rgba(0, 20, 137, 0.1);
+    position: relative;
+    overflow: hidden;
+
+    // Efeito de brilho sutil
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      animation: shimmer 3s ease-in-out infinite;
+    }
 
     .logo-image {
-      height: 64px;
+      height: 72px;
       width: auto;
-      max-width: 280px;
+      max-width: 320px;
+      filter: brightness(0) invert(1);
+      position: relative;
+      z-index: 2;
+      transition: transform 0.3s ease;
+
+      &:hover {
+        transform: scale(1.05);
+      }
     }
   }
 
   h1 {
     color: $totvs-gray-900;
     margin-bottom: $totvs-spacing-xs;
+    font-size: 2rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #001489 0%, #0033A0 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
 
   p {
-    font-size: 14px;
+    font-size: 16px;
+    color: $totvs-gray-600;
+    font-weight: 500;
   }
 }
 
 .login-form {
   margin-bottom: $totvs-spacing-lg;
 
-  .totvs-form-group:last-of-type {
-    margin-bottom: $totvs-spacing-xl;
-  }
-}
+  .totvs-form-group {
+    margin-bottom: $totvs-spacing-lg;
 
-.login-footer {
-  text-align: center;
-  padding-top: $totvs-spacing-lg;
-  border-top: 1px solid $totvs-gray-200;
+    &:last-of-type {
+      margin-bottom: $totvs-spacing-xl;
+    }
 
-  p {
-    margin: 0;
-
-    strong {
-      color: #0033A0;
+    label {
+      display: block;
+      margin-bottom: $totvs-spacing-sm;
       font-weight: 600;
+      color: $totvs-gray-700;
+      font-size: 14px;
+    }
+
+    .totvs-input {
+      width: 100%;
+      padding: 1rem 1.25rem;
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      font-size: 16px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(10px);
+
+      &:focus {
+        outline: none;
+        border-color: #001489;
+        box-shadow: 0 0 0 3px rgba(0, 20, 137, 0.1);
+        transform: translateY(-2px);
+      }
+
+      &.totvs-input--error {
+        border-color: #dc2626;
+        box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+      }
+    }
+
+    .error-message {
+      display: block;
+      margin-top: $totvs-spacing-xs;
+      color: #dc2626;
+      font-size: 12px;
+      font-weight: 500;
+    }
+  }
+
+  .totvs-btn--primary {
+    width: 100%;
+    padding: 1rem 2rem;
+    background: linear-gradient(135deg, #001489 0%, #0033A0 100%);
+    border: none;
+    border-radius: 12px;
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 14px 0 rgba(0, 20, 137, 0.3);
+
+    &:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px 0 rgba(0, 20, 137, 0.4);
+    }
+
+    &:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
     }
   }
 }
+
 
 @keyframes slideUp {
   from {
@@ -76,5 +206,78 @@
   to {
     transform: translateY(0);
     opacity: 1;
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+// Responsive
+@media (max-width: 768px) {
+  .login-container {
+    padding: $totvs-spacing-md;
+  }
+
+  .login-card {
+    padding: 2rem 1.5rem;
+    max-width: 100%;
+  }
+
+  .login-header {
+    .logo {
+      padding: $totvs-spacing-md;
+      margin-bottom: $totvs-spacing-lg;
+
+      .logo-image {
+        height: 56px;
+        max-width: 240px;
+      }
+    }
+
+    h1 {
+      font-size: 1.5rem;
+    }
+
+    p {
+      font-size: 14px;
+    }
+  }
+
+  .login-form {
+    .totvs-form-group {
+      .totvs-input {
+        padding: 0.875rem 1rem;
+        font-size: 14px;
+      }
+    }
+
+    .totvs-btn--primary {
+      padding: 0.875rem 1.5rem;
+      font-size: 14px;
+    }
   }
 }
