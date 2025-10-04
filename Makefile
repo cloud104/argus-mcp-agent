@@ -8,7 +8,7 @@ API_IMAGE ?= argus-api
 MCP_IMAGE ?= argus-mcp-server
 UI_IMAGE ?= argus-ui
 VERSION ?= latest
-TIMESTAMP := $(shell date +%Y%m%d-%H%M%S)
+TIMESTAMP ?= $(shell date +%Y%m%d-%H%M%S)
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
@@ -124,6 +124,36 @@ docker-push-dual: ## Push both latest and timestamp tags
 	@echo "✅ All images pushed successfully!"
 
 docker-release: docker-login docker-build-dual docker-push-dual ## Complete release: login + build + push (latest + timestamp)
+	@echo ""
+	@echo "🎉 Release complete!"
+	@echo ""
+	@echo "Images available at:"
+	@echo "  - $(DOCKER_REGISTRY)/$(API_IMAGE):latest"
+	@echo "  - $(DOCKER_REGISTRY)/$(API_IMAGE):$(TIMESTAMP)"
+	@echo "  - $(DOCKER_REGISTRY)/$(MCP_IMAGE):latest"
+	@echo "  - $(DOCKER_REGISTRY)/$(MCP_IMAGE):$(TIMESTAMP)"
+	@echo "  - $(DOCKER_REGISTRY)/$(UI_IMAGE):latest"
+	@echo "  - $(DOCKER_REGISTRY)/$(UI_IMAGE):$(TIMESTAMP)"
+
+docker-release-with-timestamp: ## Complete release with specific timestamp (usage: make docker-release-with-timestamp TIMESTAMP=20250104-130628)
+	@echo "🔨 Building with tags: latest and $(TIMESTAMP)"
+	docker build -f api/Dockerfile \
+		-t $(DOCKER_REGISTRY)/$(API_IMAGE):latest \
+		-t $(DOCKER_REGISTRY)/$(API_IMAGE):$(TIMESTAMP) ./api
+	docker build -f mcp-server/Dockerfile \
+		-t $(DOCKER_REGISTRY)/$(MCP_IMAGE):latest \
+		-t $(DOCKER_REGISTRY)/$(MCP_IMAGE):$(TIMESTAMP) ./mcp-server
+	docker build -f ui/Dockerfile \
+		-t $(DOCKER_REGISTRY)/$(UI_IMAGE):latest \
+		-t $(DOCKER_REGISTRY)/$(UI_IMAGE):$(TIMESTAMP) ./ui
+	@echo "📤 Pushing images with dual tags..."
+	docker push $(DOCKER_REGISTRY)/$(API_IMAGE):latest
+	docker push $(DOCKER_REGISTRY)/$(API_IMAGE):$(TIMESTAMP)
+	docker push $(DOCKER_REGISTRY)/$(MCP_IMAGE):latest
+	docker push $(DOCKER_REGISTRY)/$(MCP_IMAGE):$(TIMESTAMP)
+	docker push $(DOCKER_REGISTRY)/$(UI_IMAGE):latest
+	docker push $(DOCKER_REGISTRY)/$(UI_IMAGE):$(TIMESTAMP)
+	@echo "✅ All images pushed successfully!"
 	@echo ""
 	@echo "🎉 Release complete!"
 	@echo ""
