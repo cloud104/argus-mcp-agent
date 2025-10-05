@@ -61,13 +61,6 @@ spec:
           {{- toYaml .Values.mcpServer.livenessProbe | nindent 10 }}
         readinessProbe:
           {{- toYaml .Values.mcpServer.readinessProbe | nindent 10 }}
-        volumeMounts:
-        - name: chroma-storage
-          mountPath: /app/chroma_db
-      volumes:
-      - name: chroma-storage
-        persistentVolumeClaim:
-          claimName: {{ include "argus-agent.fullname" . }}-chroma-pvc
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

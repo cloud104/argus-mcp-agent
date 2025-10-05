@@ -1,87 +1,61 @@
-{{- if .Values.ingress.app.enabled -}}
+{{- if .Values.ingress.enabled -}}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ include "argus-agent.fullname" . }}-app
+  name: {{ include "argus-agent.fullname" . }}
   namespace: {{ .Values.global.namespace }}
   labels:
     {{- include "argus-agent.labels" . | nindent 4 }}
-    component: app
-  {{- with .Values.ingress.app.annotations }}
+  {{- with .Values.ingress.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
-  {{- if .Values.ingress.app.className }}
-  ingressClassName: {{ .Values.ingress.app.className }}
-  {{- end }}
-  {{- if .Values.ingress.app.tls }}
-  tls:
-    {{- range .Values.ingress.app.tls }}
-    - hosts:
-        {{- range .hosts }}
-        - {{ . | quote }}
-        {{- end }}
-      secretName: {{ .secretName }}
-    {{- end }}
+  {{- if .Values.ingress.className }}
+  ingressClassName: {{ .Values.ingress.className }}
   {{- end }}
   rules:
-    {{- range .Values.ingress.app.hosts }}
-    - host: {{ .host | quote }}
-      http:
-        paths:
-          {{- range .paths }}
-          - path: {{ .path }}
-            pathType: {{ .pathType }}
-            backend:
-              service:
-                name: {{ include "argus-agent.fullname" $ }}-app
-                port:
-                  number: {{ $.Values.app.service.port }}
-          {{- end }}
-    {{- end }}
-{{- end }}
----
-{{- if .Values.ingress.mcpServer.enabled -}}
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: {{ include "argus-agent.fullname" . }}-mcp-server
-  namespace: {{ .Values.global.namespace }}
-  labels:
-    {{- include "argus-agent.labels" . | nindent 4 }}
-    component: mcp-server
-  {{- with .Values.ingress.mcpServer.annotations }}
-  annotations:
-    {{- toYaml . | nindent 4 }}
-  {{- end }}
-spec:
-  {{- if .Values.ingress.mcpServer.className }}
-  ingressClassName: {{ .Values.ingress.mcpServer.className }}
-  {{- end }}
-  {{- if .Values.ingress.mcpServer.tls }}
-  tls:
-    {{- range .Values.ingress.mcpServer.tls }}
-    - hosts:
-        {{- range .hosts }}
-        - {{ . | quote }}
-        {{- end }}
-      secretName: {{ .secretName }}
-    {{- end }}
-  {{- end }}
-  rules:
-    {{- range .Values.ingress.mcpServer.hosts }}
-    - host: {{ .host | quote }}
-      http:
-        paths:
-          {{- range .paths }}
-          - path: {{ .path }}
-            pathType: {{ .pathType }}
-            backend:
-              service:
-                name: {{ include "argus-agent.fullname" $ }}-mcp-server
-                port:
-                  number: {{ $.Values.mcpServer.service.port }}
-          {{- end }}
-    {{- end }}
+  - host: {{ .Values.ingress.host }}
+    http:
+      paths:
+      # Auth Path (must come before / to avoid being caught by UI)
+      {{- if .Values.api.enabled }}
+      - path: /auth
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ include "argus-agent.fullname" . }}-api
+            port:
+              number: {{ .Values.api.service.port }}
+      {{- end }}
+      # API Path
+      {{- if .Values.api.enabled }}
+      - path: {{ .Values.ingress.paths.api.path }}
+        pathType: {{ .Values.ingress.paths.api.pathType }}
+        backend:
+          service:
+            name: {{ include "argus-agent.fullname" . }}-api
+            port:
+              number: {{ .Values.api.service.port }}
+      {{- end }}
+      # MCP Server Path
+      {{- if .Values.mcpServer.enabled }}
+      - path: {{ .Values.ingress.paths.mcp.path }}
+        pathType: {{ .Values.ingress.paths.mcp.pathType }}
+        backend:
+          service:
+            name: {{ include "argus-agent.fullname" . }}-mcp-server
+            port:
+              number: {{ .Values.mcpServer.service.port }}
+      {{- end }}
+      # UI Path (must be last to match / as catch-all)
+      {{- if .Values.ui.enabled }}
+      - path: {{ .Values.ingress.paths.ui.path }}
+        pathType: {{ .Values.ingress.paths.ui.pathType }}
+        backend:
+          service:
+            name: {{ include "argus-agent.fullname" . }}-ui
+            port:
+              number: {{ .Values.ui.service.port }}
+      {{- end }}
 {{- end }}

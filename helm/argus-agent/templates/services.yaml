@@ -23,27 +23,102 @@ spec:
     app: {{ .Values.mcpServer.name }}
 {{- end }}
 ---
-{{- if .Values.app.enabled }}
+{{- if .Values.api.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "argus-agent.fullname" . }}-app
+  name: {{ include "argus-agent.fullname" . }}-api
   namespace: {{ .Values.global.namespace }}
   labels:
     {{- include "argus-agent.labels" . | nindent 4 }}
-    app: {{ .Values.app.name }}
-  {{- with .Values.app.service.annotations }}
+    app: {{ .Values.api.name }}
+  {{- with .Values.api.service.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
-  type: {{ .Values.app.service.type }}
+  type: {{ .Values.api.service.type }}
   ports:
-  - port: {{ .Values.app.service.port }}
-    targetPort: {{ .Values.app.service.targetPort }}
+  - port: {{ .Values.api.service.port }}
+    targetPort: {{ .Values.api.service.targetPort }}
     protocol: TCP
     name: http
   selector:
     {{- include "argus-agent.selectorLabels" . | nindent 4 }}
-    app: {{ .Values.app.name }}
+    app: {{ .Values.api.name }}
+{{- end }}
+---
+{{- if .Values.ui.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "argus-agent.fullname" . }}-ui
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "argus-agent.labels" . | nindent 4 }}
+    app: {{ .Values.ui.name }}
+  {{- with .Values.ui.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.ui.service.type }}
+  ports:
+  - port: {{ .Values.ui.service.port }}
+    targetPort: {{ .Values.ui.service.targetPort }}
+    protocol: TCP
+    name: http
+  selector:
+    {{- include "argus-agent.selectorLabels" . | nindent 4 }}
+    app: {{ .Values.ui.name }}
+{{- end }}
+---
+{{- if .Values.postgresql.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "argus-agent.fullname" . }}-postgres
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "argus-agent.labels" . | nindent 4 }}
+    app: {{ .Values.postgresql.name }}
+  {{- with .Values.postgresql.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.postgresql.service.type }}
+  ports:
+  - port: {{ .Values.postgresql.service.port }}
+    targetPort: {{ .Values.postgresql.service.port }}
+    protocol: TCP
+    name: postgres
+  selector:
+    {{- include "argus-agent.selectorLabels" . | nindent 4 }}
+    app: {{ .Values.postgresql.name }}
+{{- end }}
+---
+{{- if .Values.chromadb.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "argus-agent.fullname" . }}-chromadb
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "argus-agent.labels" . | nindent 4 }}
+    app: {{ .Values.chromadb.name }}
+  {{- with .Values.chromadb.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.chromadb.service.type }}
+  ports:
+  - port: {{ .Values.chromadb.service.port }}
+    targetPort: {{ .Values.chromadb.service.port }}
+    protocol: TCP
+    name: http
+  selector:
+    {{- include "argus-agent.selectorLabels" . | nindent 4 }}
+    app: {{ .Values.chromadb.name }}
 {{- end }}

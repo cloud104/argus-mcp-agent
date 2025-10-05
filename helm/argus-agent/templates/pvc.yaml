@@ -17,3 +17,23 @@ spec:
   storageClassName: {{ .Values.storage.chroma.storageClassName }}
   {{- end }}
 {{- end }}
+---
+{{- if .Values.storage.postgres.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "argus-agent.fullname" . }}-postgres-pvc
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "argus-agent.labels" . | nindent 4 }}
+    component: storage
+spec:
+  accessModes:
+    - {{ .Values.storage.postgres.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.storage.postgres.size }}
+  {{- if .Values.storage.postgres.storageClassName }}
+  storageClassName: {{ .Values.storage.postgres.storageClassName }}
+  {{- end }}
+{{- end }}

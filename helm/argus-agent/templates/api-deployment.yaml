@@ -1,19 +1,19 @@
-{{- if .Values.app.enabled }}
+{{- if .Values.api.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "argus-agent.fullname" . }}-app
+  name: {{ include "argus-agent.fullname" . }}-api
   namespace: {{ .Values.global.namespace }}
   labels:
     {{- include "argus-agent.labels" . | nindent 4 }}
-    app: {{ .Values.app.name }}
-    component: frontend
+    app: {{ .Values.api.name }}
+    component: api
 spec:
-  replicas: {{ .Values.app.replicaCount }}
+  replicas: {{ .Values.api.replicaCount }}
   selector:
     matchLabels:
       {{- include "argus-agent.selectorLabels" . | nindent 6 }}
-      app: {{ .Values.app.name }}
+      app: {{ .Values.api.name }}
   template:
     metadata:
       annotations:
@@ -23,8 +23,8 @@ spec:
         {{- end }}
       labels:
         {{- include "argus-agent.selectorLabels" . | nindent 8 }}
-        app: {{ .Values.app.name }}
-        component: frontend
+        app: {{ .Values.api.name }}
+        component: api
     spec:
       {{- with .Values.image.pullSecrets }}
       imagePullSecrets:
@@ -34,12 +34,12 @@ spec:
       securityContext:
         {{- toYaml .Values.securityContext | nindent 8 }}
       containers:
-      - name: app
-        image: "{{ .Values.image.registry }}/{{ .Values.app.image.repository }}:{{ .Values.app.image.tag | default .Values.image.tag }}"
+      - name: api
+        image: "{{ .Values.image.registry }}/{{ .Values.api.image.repository }}:{{ .Values.api.image.tag | default .Values.image.tag }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         ports:
         - name: http
-          containerPort: {{ .Values.app.service.targetPort }}
+          containerPort: {{ .Values.api.service.targetPort }}
           protocol: TCP
         env:
         - name: PYTHONUNBUFFERED
@@ -58,17 +58,15 @@ spec:
         - secretRef:
             name: {{ .Values.secrets.existingSecret | default (printf "%s-secrets" (include "argus-agent.fullname" .)) }}
         resources:
-          {{- toYaml .Values.app.resources | nindent 10 }}
+          {{- toYaml .Values.api.resources | nindent 10 }}
         livenessProbe:
-          {{- toYaml .Values.app.livenessProbe | nindent 10 }}
+          {{- toYaml .Values.api.livenessProbe | nindent 10 }}
         readinessProbe:
-          {{- toYaml .Values.app.readinessProbe | nindent 10 }}
+          {{- toYaml .Values.api.readinessProbe | nindent 10 }}
         volumeMounts:
         - name: config-volume
           mountPath: /app/config
           readOnly: true
-        - name: chroma-storage
-          mountPath: /app/chroma_db
       volumes:
       - name: config-volume
         configMap:
@@ -78,9 +76,6 @@ spec:
             path: settings.json
           - key: models.json
             path: models.json
-      - name: chroma-storage
-        persistentVolumeClaim:
-          claimName: {{ include "argus-agent.fullname" . }}-chroma-pvc
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

@@ -1,8 +1,8 @@
-{{- if .Values.app.autoscaling.enabled }}
+{{- if and .Values.api.enabled .Values.api.autoscaling.enabled }}
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ include "argus-agent.fullname" . }}-app
+  name: {{ include "argus-agent.fullname" . }}-api
   namespace: {{ .Values.global.namespace }}
   labels:
     {{- include "argus-agent.labels" . | nindent 4 }}
@@ -10,24 +10,24 @@ spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ include "argus-agent.fullname" . }}-app
-  minReplicas: {{ .Values.app.autoscaling.minReplicas }}
-  maxReplicas: {{ .Values.app.autoscaling.maxReplicas }}
+    name: {{ include "argus-agent.fullname" . }}-api
+  minReplicas: {{ .Values.api.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.api.autoscaling.maxReplicas }}
   metrics:
-  {{- if .Values.app.autoscaling.targetCPUUtilizationPercentage }}
+  {{- if .Values.api.autoscaling.targetCPUUtilizationPercentage }}
   - type: Resource
     resource:
       name: cpu
       target:
         type: Utilization
-        averageUtilization: {{ .Values.app.autoscaling.targetCPUUtilizationPercentage }}
+        averageUtilization: {{ .Values.api.autoscaling.targetCPUUtilizationPercentage }}
   {{- end }}
-  {{- if .Values.app.autoscaling.targetMemoryUtilizationPercentage }}
+  {{- if .Values.api.autoscaling.targetMemoryUtilizationPercentage }}
   - type: Resource
     resource:
       name: memory
       target:
         type: Utilization
-        averageUtilization: {{ .Values.app.autoscaling.targetMemoryUtilizationPercentage }}
+        averageUtilization: {{ .Values.api.autoscaling.targetMemoryUtilizationPercentage }}
   {{- end }}
 {{- end }}

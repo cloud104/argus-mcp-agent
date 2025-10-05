@@ -1,5 +1,8 @@
-# Default values for argus-agent
-# This is a YAML-formatted file.
+# =============================================================================
+# Argus Agent - Sandbox Environment Configuration
+# Namespace: argus
+# Environment: sandbox.tcloud-devops.cloudtotvs.com.br
+# =============================================================================
 
 # Global settings
 global:
@@ -9,9 +12,9 @@ global:
 image:
   registry: southamerica-east1-docker.pkg.dev/tcloud-devops/tcloud-devops
   repository: argus-api
-  tag: "20251004-154046"
+  tag: "20251005-000416"
   pullPolicy: IfNotPresent
-  pullSecrets: 
+  pullSecrets:
     - name: gcr-json-key
 
 # MCP Server configuration
@@ -23,8 +26,8 @@ mcpServer:
   image:
     registry: southamerica-east1-docker.pkg.dev/tcloud-devops/tcloud-devops
     repository: argus-mcp-server
-    tag: "20251004-154046"
-    pullSecrets: 
+    tag: "20251005-000416"
+    pullSecrets:
       - name: gcr-json-key
 
   service:
@@ -45,7 +48,7 @@ mcpServer:
     httpGet:
       path: /health/live
       port: 8002
-    initialDelaySeconds: 10
+    initialDelaySeconds: 15
     periodSeconds: 10
     timeoutSeconds: 5
     failureThreshold: 3
@@ -54,7 +57,7 @@ mcpServer:
     httpGet:
       path: /health/ready
       port: 8002
-    initialDelaySeconds: 5
+    initialDelaySeconds: 10
     periodSeconds: 5
     timeoutSeconds: 3
     failureThreshold: 3
@@ -63,12 +66,12 @@ mcpServer:
 api:
   enabled: true
   name: argus-api
-  replicaCount: 2
+  replicaCount: 1
 
   image:
     registry: southamerica-east1-docker.pkg.dev/tcloud-devops/tcloud-devops
     repository: argus-api
-    tag: "20251004-154046"
+    tag: "20251005-000416"
     pullSecrets:
       - name: gcr-json-key
 
@@ -90,7 +93,7 @@ api:
     httpGet:
       path: /health/live
       port: 8000
-    initialDelaySeconds: 15
+    initialDelaySeconds: 20
     periodSeconds: 10
     timeoutSeconds: 5
     failureThreshold: 3
@@ -99,17 +102,13 @@ api:
     httpGet:
       path: /health/ready
       port: 8000
-    initialDelaySeconds: 10
+    initialDelaySeconds: 15
     periodSeconds: 5
     timeoutSeconds: 3
     failureThreshold: 3
 
   autoscaling:
     enabled: false
-    minReplicas: 2
-    maxReplicas: 10
-    targetCPUUtilizationPercentage: 80
-    targetMemoryUtilizationPercentage: 80
 
 # UI configuration
 ui:
@@ -120,8 +119,8 @@ ui:
   image:
     registry: southamerica-east1-docker.pkg.dev/tcloud-devops/tcloud-devops
     repository: argus-ui
-    tag: "20251004-154046"
-    pullSecrets: 
+    tag: "20251005-000416"
+    pullSecrets:
       - name: gcr-json-key
 
   service:
@@ -155,31 +154,6 @@ ui:
     periodSeconds: 5
     timeoutSeconds: 3
     failureThreshold: 3
-
-# Ingress configuration
-ingress:
-  enabled: true
-  className: "nginx"
-  annotations:
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    nginx.ingress.kubernetes.io/proxy-body-size: "0"
-    nginx.ingress.kubernetes.io/proxy-buffering: "off"
-    nginx.ingress.kubernetes.io/proxy-connect-timeout: "900"
-    nginx.ingress.kubernetes.io/proxy-read-timeout: "900"
-    nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
-    nginx.ingress.kubernetes.io/proxy-send-timeout: "900"
-  host: argus.sandbox.tcloud-devops.cloudtotvs.com.br
-  paths:
-    api:
-      path: /api
-      pathType: Prefix
-    mcp:
-      path: /mcp
-      pathType: Prefix
-    ui:
-      path: /
-      pathType: Prefix
-
 
 # PostgreSQL configuration
 postgresql:
@@ -235,7 +209,7 @@ postgresql:
 
 # ChromaDB configuration
 chromadb:
-  enabled: true  # Set to false to use embedded ChromaDB in app pods
+  enabled: true
   name: argus-chromadb
   replicaCount: 1
 
@@ -257,44 +231,74 @@ chromadb:
       memory: "512Mi"
       cpu: "500m"
 
+  # Using TCP probes instead of HTTP (v1 API deprecated)
   livenessProbe:
-    httpGet:
-      path: /api/v1/heartbeat
+    httpGet: null
+    tcpSocket:
       port: 8000
-    initialDelaySeconds: 10
+    initialDelaySeconds: 15
     periodSeconds: 10
     timeoutSeconds: 5
     failureThreshold: 3
 
   readinessProbe:
-    httpGet:
-      path: /api/v1/heartbeat
+    httpGet: null
+    tcpSocket:
       port: 8000
-    initialDelaySeconds: 5
+    initialDelaySeconds: 10
     periodSeconds: 5
     timeoutSeconds: 3
     failureThreshold: 3
 
   extraEnv: []
-  # - name: CHROMA_SERVER_AUTH_CREDENTIALS
-  #   value: "admin:password"
 
-# Storage configuration
+# Ingress configuration
+ingress:
+  enabled: true
+  className: ""  # Empty - using annotation instead (legacy cluster without IngressClass)
+  annotations:
+    kubernetes.io/ingress.class: "nginx"  # Legacy annotation for clusters without IngressClass
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"  # Force HTTPS redirect
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"  # Ensure SSL redirect
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "900"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "900"
+    nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "900"
+  host: argus.sandbox.tcloud-devops.cloudtotvs.com.br
+  paths:
+    api:
+      path: /api
+      pathType: Prefix
+    mcp:
+      path: /mcp
+      pathType: Prefix
+    ui:
+      path: /
+      pathType: Prefix
+
+# Storage configuration (only for postgres and chromadb)
 storage:
   chroma:
     enabled: true
     size: 10Gi
-    storageClassName: "standard"
-    accessMode: ReadWriteOnce  # Use ReadWriteMany if chromadb.enabled=false (shared PVC)
+    storageClassName: "longhorn"
+    accessMode: ReadWriteOnce
+
+  postgres:
+    enabled: true
+    size: 10Gi
+    storageClassName: "longhorn"
+    accessMode: ReadWriteOnce
 
 # Configuration
 config:
   # MCP Server URL (will be templated)
-  mcpServerUrl: "http://{{ .Release.Name }}-mcp-server:8002/mcp/"
+  mcpServerUrl: "http://argus-agent-mcp-server:8002/mcp/"
 
   # ChromaDB URL (if using standalone ChromaDB)
-  # Leave empty to use embedded ChromaDB
-  chromadbUrl: "http://{{ .Release.Name }}-chromadb:8000"
+  chromadbUrl: "http://argus-agent-chromadb:8000"
 
   # Models configuration
   models:
@@ -330,14 +334,6 @@ secrets:
     host: ""
     user: ""
     password: ""
-
-# PostgreSQL storage configuration
-storage:
-  postgres:
-    enabled: true
-    size: 10Gi
-    storageClassName: "standard"
-    accessMode: ReadWriteOnce
 
 # Security context
 securityContext:
