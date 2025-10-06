@@ -1,3 +1,91 @@
+# MCP Server - Uso Remoto
+
+Este documento descreve como usar o MCP Server remotamente no ambiente sandbox.
+
+## Endpoint
+
+- Base: `https://argus.sandbox.tcloud-devops.cloudtotvs.com.br/mcp/`
+- Health (sem autenticação): `GET /mcp/`
+
+## Autenticação
+
+O MCP exige `Authorization: Bearer <token>`:
+
+1. Obtenha um `access_token` na API:
+
+```bash
+curl -s -X POST https://argus.sandbox.tcloud-devops.cloudtotvs.com.br/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"<user>","password":"<pass>"}'
+```
+
+2. Alternativamente, quando provisionado, use `MCP_SERVICE_TOKEN` como Bearer.
+
+## Ferramentas (HTTP)
+
+Envie `POST` para os endpoints abaixo com JSON e Bearer token.
+
+- Buscar logs recentes
+
+```
+POST /mcp/tools/search_logs
+{
+  "index": "meu_indice",
+  "window": "2h"
+}
+```
+
+- Contexto histórico (RAG)
+
+```
+POST /mcp/tools/retrieve_historical_context
+{
+  "index": "meu_indice",
+  "query": "erros 500 ontem"
+}
+```
+
+- Salvar resumo no RAG
+
+```
+POST /mcp/tools/save_analysis_summary
+{
+  "index": "meu_indice",
+  "summary": "Resumo da investigação..."
+}
+```
+
+- Anomalias em série temporal
+
+```
+POST /mcp/tools/detect_timeseries_anomalies
+{
+  "data": [ { "timestamp": "2025-10-06T10:00:00Z", "value": 1.23 } ],
+  "contamination": 0.1
+}
+```
+
+## Exemplo completo (curl)
+
+```bash
+TOKEN=$(curl -s -X POST https://argus.sandbox.tcloud-devops.cloudtotvs.com.br/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"admin","password":"<senha>"}' | jq -r .access_token)
+
+curl -s https://argus.sandbox.tcloud-devops.cloudtotvs.com.br/mcp/
+
+curl -s -X POST https://argus.sandbox.tcloud-devops.cloudtotvs.com.br/mcp/tools/search_logs \
+  -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"index":"logs_prod_app","window":"1h"}'
+```
+
+## Boas práticas
+
+- Prefira janelas menores (ex.: `15m`, `1h`) para reduzir latência/custo no Elasticsearch.
+- Paralelize leituras quando necessário, respeitando limites do cluster.
+- Trate erros: `401` (auth), `503` (dependências indisponíveis), `429` (limites, se configurado).
+
 # Argus MCP Server
 
 FastMCP server exposing tools for log analysis, RAG, and anomaly detection.
