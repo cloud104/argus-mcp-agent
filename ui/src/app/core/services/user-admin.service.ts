@@ -26,6 +26,10 @@ export interface ResetPasswordRequest {
   new_password: string;
 }
 
+export interface UpdateEmailRequest {
+  new_email: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -68,6 +72,16 @@ export class UserAdminService {
     return this.http.put<{ message: string }>(
       `${this.apiUrl}/auth/users/${username}/password`,
       { new_password: newPassword }
+    );
+  }
+
+  /**
+   * Update user email (admin)
+   */
+  updateUserEmail(username: string, newEmail: string): Observable<{ message: string }> {
+    return this.http.put<{ message: string }>(
+      `${this.apiUrl}/auth/users/${username}/email`,
+      { new_email: newEmail }
     );
   }
 

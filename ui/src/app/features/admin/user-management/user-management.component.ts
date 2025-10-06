@@ -16,6 +16,7 @@ export class UserManagementComponent implements OnInit {
   isLoading = signal(false);
   showCreateModal = signal(false);
   showResetModal = signal(false);
+  showEmailModal = signal(false);
   errorMessage = signal<string | null>(null);
   successMessage = signal<string | null>(null);
 
@@ -69,6 +70,7 @@ export class UserManagementComponent implements OnInit {
 
   // Reset password modal state
   selectedUserForReset: User | null = null;
+  selectedUserForEmail: User | null = null;
 
   openResetModal(user: User): void {
     this.selectedUserForReset = user;
@@ -78,6 +80,16 @@ export class UserManagementComponent implements OnInit {
   closeResetModal(): void {
     this.selectedUserForReset = null;
     this.showResetModal.set(false);
+  }
+
+  openEmailModal(user: User): void {
+    this.selectedUserForEmail = user;
+    this.showEmailModal.set(true);
+  }
+
+  closeEmailModal(): void {
+    this.selectedUserForEmail = null;
+    this.showEmailModal.set(false);
   }
 
   onResetPassword(newPassword: string): void {
@@ -98,6 +110,31 @@ export class UserManagementComponent implements OnInit {
       error: (error) => {
         const detail = error?.error?.detail;
         const message = typeof detail === 'string' ? detail : (error?.message || 'Erro ao atualizar senha');
+        this.errorMessage.set(message);
+        this.isLoading.set(false);
+      }
+    });
+  }
+
+  onUpdateEmail(newEmail: string): void {
+    if (!this.selectedUserForEmail) return;
+    if (!newEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+      this.errorMessage.set('Email inválido');
+      return;
+    }
+
+    this.isLoading.set(true);
+    this.userAdminService.updateUserEmail(this.selectedUserForEmail.username, newEmail).subscribe({
+      next: () => {
+        this.successMessage.set('Email atualizado com sucesso!');
+        this.isLoading.set(false);
+        this.closeEmailModal();
+        this.loadUsers();
+        setTimeout(() => this.successMessage.set(null), 3000);
+      },
+      error: (error) => {
+        const detail = error?.error?.detail;
+        const message = typeof detail === 'string' ? detail : (error?.message || 'Erro ao atualizar email');
         this.errorMessage.set(message);
         this.isLoading.set(false);
       }

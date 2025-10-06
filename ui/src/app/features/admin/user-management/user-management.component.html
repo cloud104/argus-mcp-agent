@@ -87,6 +87,15 @@
                   <div class="action-buttons">
                     <button
                       class="totvs-btn totvs-btn--ghost totvs-btn--sm"
+                      (click)="openEmailModal(user)"
+                      title="Alterar email"
+                    >
+                      <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12H8m12 0a8 8 0 11-16 0 8 8 0 0116 0z"/>
+                      </svg>
+                    </button>
+                    <button
+                      class="totvs-btn totvs-btn--ghost totvs-btn--sm"
                       (click)="openResetModal(user)"
                       title="Redefinir senha"
                     >
@@ -154,6 +163,34 @@
         <div class="modal-footer">
           <button type="button" class="totvs-btn totvs-btn--ghost" (click)="closeResetModal()">Cancelar</button>
           <button type="button" class="totvs-btn totvs-btn--primary" [disabled]="isLoading()" (click)="onResetPassword(pwd.value)">
+            @if (isLoading()) { <div class="totvs-spinner totvs-spinner--sm"></div><span>Salvando...</span> } @else { <span>Salvar</span> }
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Update Email Modal -->
+  @if (showEmailModal()) {
+    <div class="modal-overlay" (click)="closeEmailModal()">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>Alterar Email</h2>
+          <button class="close-btn" (click)="closeEmailModal()">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="totvs-form-group">
+            <label for="newEmail">Novo Email *</label>
+            <input type="email" id="newEmail" class="totvs-input" #email placeholder="Digite o novo email" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="totvs-btn totvs-btn--ghost" (click)="closeEmailModal()">Cancelar</button>
+          <button type="button" class="totvs-btn totvs-btn--primary" [disabled]="isLoading()" (click)="onUpdateEmail(email.value)">
             @if (isLoading()) { <div class="totvs-spinner totvs-spinner--sm"></div><span>Salvando...</span> } @else { <span>Salvar</span> }
           </button>
         </div>

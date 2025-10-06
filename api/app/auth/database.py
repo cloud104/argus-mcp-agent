@@ -309,6 +309,34 @@ async def update_user_role(username: str, role: str) -> bool:
         return result.endswith("1")
 
 
+async def update_user_email(username: str, new_email: str) -> bool:
+    """Update a user's email address.
+
+    Args:
+        username: The username to update
+        new_email: New email address
+
+    Returns:
+        True if successful, False if user not found
+    """
+    pool = await get_pool()
+
+    async with pool.acquire() as conn:
+        try:
+            result = await conn.execute(
+                """
+                UPDATE users
+                SET email = $1, updated_at = CURRENT_TIMESTAMP
+                WHERE username = $2
+                """,
+                new_email, username,
+            )
+            return result.endswith("1")
+        except asyncpg.UniqueViolationError:
+            # email já utilizado por outro usuário
+            raise
+
+
 async def disable_user(username: str) -> bool:
     """
     Disable a user account.

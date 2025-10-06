@@ -13,6 +13,7 @@ from app.auth.models import (
     RefreshTokenRequest,
     PasswordChange,
     PasswordReset,
+    EmailUpdate,
 )
 from app.auth.security import (
     verify_password,
@@ -31,6 +32,7 @@ from app.auth.database import (
     delete_user,
     disable_user,
     enable_user,
+    update_user_email,
 )
 from app.auth.dependencies import get_current_user, require_admin
 
@@ -205,6 +207,31 @@ async def change_password(
     return {"message": "Password changed successfully"}
 
 
+@router.post("/change-email")
+async def change_email(
+    payload: EmailUpdate,
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Change email for current user.
+    """
+    try:
+        success = await update_user_email(current_user.username, payload.new_email)
+    except UniqueViolationError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already in use",
+        )
+
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    return {"message": "Email changed successfully"}
+
+
 # Admin-only endpoints
 
 
@@ -334,6 +361,30 @@ async def admin_reset_password(
         )
 
     return {"message": f"Password for {username} updated"}
+
+
+@router.put("/users/{username}/email")
+async def admin_update_email(
+    username: str,
+    payload: EmailUpdate,
+    current_user: User = Depends(require_admin),
+):
+    """Update a user's email (admin only)."""
+    try:
+        success = await update_user_email(username, payload.new_email)
+    except UniqueViolationError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already in use",
+        )
+
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    return {"message": f"Email for {username} updated"}
 
 
 @router.put("/users/{username}/disable")

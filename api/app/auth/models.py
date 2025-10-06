@@ -65,3 +65,8 @@ class PasswordChange(BaseModel):
 class PasswordReset(BaseModel):
     """Model for admin password reset requests."""
     new_password: str = Field(..., min_length=8)
+
+
+class EmailUpdate(BaseModel):
+    """Model for email update requests."""
+    new_email: EmailStr
