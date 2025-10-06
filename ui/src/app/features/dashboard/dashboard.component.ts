@@ -23,7 +23,8 @@ export class DashboardComponent implements OnInit {
   windows = [
     { label: '24 Horas', value: '24h' },
     { label: '7 Dias', value: '7d' },
-    { label: '30 Dias', value: '30d' }
+    { label: '30 Dias', value: '30d' },
+    { label: 'Custom', value: 'custom' }
   ];
 
   constructor(
@@ -42,7 +43,33 @@ export class DashboardComponent implements OnInit {
     this.isLoading.set(true);
     this.errorMessage.set(null);
 
+    // Para simplificar, se custom o back pode receber start/end via query params mais tarde
     this.metricsService.getDashboardMetrics('csalva7_203089_logs', this.selectedWindow()).subscribe({
+      next: (data) => {
+        this.metrics.set(data);
+        this.isLoading.set(false);
+      },
+      error: (error) => {
+        this.errorMessage.set(error.error?.detail || 'Erro ao carregar métricas');
+        this.isLoading.set(false);
+      }
+    });
+  }
+
+  applyCustomRange(start: string, end: string): void {
+    if (!start || !end) {
+      this.errorMessage.set('Selecione início e fim do intervalo');
+      return;
+    }
+
+    this.isLoading.set(true);
+    this.errorMessage.set(null);
+
+    // Converte para ISO completo (YYYY-MM-DDTHH:mm)
+    const startIso = new Date(start).toISOString();
+    const endIso = new Date(end).toISOString();
+
+    this.metricsService.getDashboardMetricsRange('csalva7_203089_logs', startIso, endIso).subscribe({
       next: (data) => {
         this.metrics.set(data);
         this.isLoading.set(false);

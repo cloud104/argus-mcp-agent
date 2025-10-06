@@ -15,6 +15,7 @@ export interface DashboardMetrics {
     start: string;
     end: string;
   };
+  coverage_days: number;
 }
 
 @Injectable({
@@ -31,6 +32,15 @@ export class MetricsService {
   getDashboardMetrics(index: string = 'csalva7_203089_logs', window: string = '7d'): Observable<DashboardMetrics> {
     return this.http.get<DashboardMetrics>(`${this.apiUrl}/metrics/dashboard`, {
       params: { index, window }
+    });
+  }
+
+  /**
+   * Get dashboard metrics with explicit start/end (ISO 8601)
+   */
+  getDashboardMetricsRange(index: string, start: string, end: string): Observable<DashboardMetrics> {
+    return this.http.get<DashboardMetrics>(`${this.apiUrl}/metrics/dashboard`, {
+      params: { index, start, end }
     });
   }
 }

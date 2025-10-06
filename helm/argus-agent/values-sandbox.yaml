@@ -71,7 +71,7 @@ api:
   image:
     registry: southamerica-east1-docker.pkg.dev/tcloud-devops/tcloud-devops
     repository: argus-api
-    tag: "20251006-100605"
+    tag: "20251006-103239"
     pullSecrets:
       - name: gcr-json-key
 
@@ -119,7 +119,7 @@ ui:
   image:
     registry: southamerica-east1-docker.pkg.dev/tcloud-devops/tcloud-devops
     repository: argus-ui
-    tag: "20251006-095839"
+    tag: "20251006-105358"
     pullSecrets:
       - name: gcr-json-key
 

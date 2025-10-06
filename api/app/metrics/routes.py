@@ -2,7 +2,7 @@
 Metrics routes - Provides log statistics and metrics aggregations
 """
 from fastapi import APIRouter, HTTPException, Depends
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from datetime import datetime, timedelta
 import os
 from elasticsearch import AsyncElasticsearch
@@ -39,7 +39,9 @@ async def get_es() -> AsyncElasticsearch:
 async def get_dashboard_metrics(
     index: str = "csalva7_203089_logs",
     window: str = "7d",
-    current_user: User = Depends(get_current_user)
+    start: Optional[str] = None,
+    end: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
 ) -> Dict[str, Any]:
     """
     Get aggregated metrics for dashboard visualization.
@@ -55,19 +57,27 @@ async def get_dashboard_metrics(
     try:
         es = await get_es()
 
-        # Build query for time range
+        # Build query for time range (supports explicit start/end or window)
         now = datetime.utcnow()
-        if window.endswith('h'):
-            hours = int(window[:-1])
-            start_time = now - timedelta(hours=hours)
-        elif window.endswith('d'):
-            days = int(window[:-1])
-            start_time = now - timedelta(days=days)
+        if start and end:
+            try:
+                start_time = datetime.fromisoformat(start)
+                now = datetime.fromisoformat(end)
+            except Exception:
+                # fallback to window if parsing fails
+                start_time = now - timedelta(days=7)
         else:
-            # Default to 7 days
-            start_time = now - timedelta(days=7)
+            if window.endswith('h'):
+                hours = int(window[:-1])
+                start_time = now - timedelta(hours=hours)
+            elif window.endswith('d'):
+                days = int(window[:-1])
+                start_time = now - timedelta(days=days)
+            else:
+                # Default to 7 days
+                start_time = now - timedelta(days=7)
 
-        # Main aggregation query
+        # Main aggregation query (adds daily histogram to medir cobertura)
         query = {
             "query": {
                 "range": {
@@ -78,6 +88,7 @@ async def get_dashboard_metrics(
                 }
             },
             "size": 0,
+            "track_total_hits": True,
             "aggs": {
                 "severity_agg": {
                     "terms": {
@@ -102,6 +113,13 @@ async def get_dashboard_metrics(
                         "field": "timestamp",
                         "fixed_interval": "1h",
                         "format": "yyyy-MM-dd'T'HH:mm:ss"
+                    }
+                },
+                "daily_agg": {
+                    "date_histogram": {
+                        "field": "timestamp",
+                        "calendar_interval": "1d",
+                        "format": "yyyy-MM-dd"
                     }
                 }
             }
@@ -148,6 +166,10 @@ async def get_dashboard_metrics(
         warnings = lower_map.get("warning", 0)
         error_rate = ((errors + warnings) / total_logs * 100) if total_logs > 0 else 0
 
+        # Daily coverage: how many days in range have documents
+        daily_buckets = aggs.get("daily_agg", {}).get("buckets", [])
+        coverage_days = sum(1 for b in daily_buckets if b.get("doc_count", 0) > 0)
+
         return {
             "total_logs": total_logs,
             "severity_distribution": severity_dist,
@@ -159,7 +181,8 @@ async def get_dashboard_metrics(
             "period": {
                 "start": start_time.isoformat(),
                 "end": now.isoformat()
-            }
+            },
+            "coverage_days": coverage_days
         }
 
     except Exception as e:

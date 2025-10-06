@@ -20,20 +20,25 @@
           (click)="changeWindow(window.value)">
           {{ window.label }}
         </button>
+        @if (selectedWindow() === 'custom') {
+          <div class="custom-range">
+            <input type="datetime-local" #startInput />
+            <span>–</span>
+            <input type="datetime-local" #endInput />
+            <button class="totvs-btn totvs-btn--primary" (click)="applyCustomRange(startInput.value, endInput.value)">Aplicar</button>
+          </div>
+        }
       </div>
       
       @if (currentUser | async; as user) {
         <div class="user-menu">
-          <div class="user-avatar" (click)="goToChangePassword()" title="Alterar senha">
+          <div class="user-avatar" (click)="goToChangePassword()" title="">
             {{ user.username.charAt(0).toUpperCase() }}
           </div>
-          <span class="user-name" (click)="goToChangePassword()" title="Alterar senha">
+          <span class="user-name" (click)="goToChangePassword()" title="">
             {{ user.username }}
           </span>
-          <button class="totvs-btn totvs-btn--ghost totvs-btn--sm" (click)="goToChangePassword()" title="Alterar senha">
-            Alterar senha
-          </button>
-          <button class="totvs-btn totvs-btn--icon" (click)="goToChangePassword()" title="Alterar senha">
+          <button class="totvs-btn totvs-btn--icon" (click)="goToChangePassword()" title="">
             <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm0 2c-3.866 0-7 2.239-7 5v2h14v-2c0-2.761-3.134-5-7-5z"/>
             </svg>
@@ -132,6 +137,20 @@
         <div class="metric-content">
           <div class="metric-label">Taxa de Erros</div>
           <div class="metric-value">{{ metrics()!.error_rate }}%</div>
+        </div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-icon" style="background: linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%);">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 18v-6a9 9 0 0118 0v6"/>
+            <path d="M21 19a2 2 0 01-2 2H5a2 2 0 01-2-2"/>
+          </svg>
+        </div>
+        <div class="metric-content">
+          <div class="metric-label">Cobertura (dias)</div>
+          <div class="metric-value">{{ metrics()!.coverage_days }}</div>
+          <div class="metric-subtitle">{{ metrics()!.period.start | date:'dd/MM/yyyy' }} – {{ metrics()!.period.end | date:'dd/MM/yyyy' }}</div>
         </div>
       </div>
 
