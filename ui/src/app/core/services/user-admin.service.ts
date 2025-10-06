@@ -22,6 +22,10 @@ export interface UpdateRoleRequest {
   role: 'admin' | 'viewer';
 }
 
+export interface ResetPasswordRequest {
+  new_password: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -54,6 +58,16 @@ export class UserAdminService {
     return this.http.put<{ message: string }>(
       `${this.apiUrl}/auth/users/${username}/role`,
       { role }
+    );
+  }
+
+  /**
+   * Reset user password (admin)
+   */
+  resetUserPassword(username: string, newPassword: string): Observable<{ message: string }> {
+    return this.http.put<{ message: string }>(
+      `${this.apiUrl}/auth/users/${username}/password`,
+      { new_password: newPassword }
     );
   }
 

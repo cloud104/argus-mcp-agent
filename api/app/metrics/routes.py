@@ -142,9 +142,10 @@ async def get_dashboard_metrics(
             for bucket in hourly_buckets
         ]
 
-        # Calculate error rate
-        errors = severity_dist.get("error", 0)
-        warnings = severity_dist.get("warning", 0)
+        # Calculate error rate (case-insensitive keys)
+        lower_map = {k.lower(): v for k, v in severity_dist.items()}
+        errors = lower_map.get("error", 0) + lower_map.get("fatal", 0) + lower_map.get("critical", 0) + lower_map.get("emerg", 0)
+        warnings = lower_map.get("warning", 0)
         error_rate = ((errors + warnings) / total_logs * 100) if total_logs > 0 else 0
 
         return {

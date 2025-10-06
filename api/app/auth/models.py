@@ -2,6 +2,7 @@
 """Pydantic models for authentication and authorization."""
 
 from typing import Optional, Literal
+from datetime import datetime
 from pydantic import BaseModel, EmailStr, Field
 
 
@@ -12,6 +13,7 @@ class User(BaseModel):
     full_name: Optional[str] = None
     role: Literal["admin", "developer", "viewer"] = "viewer"
     disabled: bool = False
+    created_at: Optional[datetime] = None
 
 
 class UserInDB(User):
@@ -57,4 +59,9 @@ class RefreshTokenRequest(BaseModel):
 class PasswordChange(BaseModel):
     """Model for password change requests."""
     old_password: str
+    new_password: str = Field(..., min_length=8)
+
+
+class PasswordReset(BaseModel):
+    """Model for admin password reset requests."""
     new_password: str = Field(..., min_length=8)

@@ -113,6 +113,20 @@ export class AuthService {
   }
 
   /**
+   * Change password for current user
+   */
+  changePassword(oldPassword: string, newPassword: string): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${this.baseUrl}/auth/change-password`, {
+      old_password: oldPassword,
+      new_password: newPassword
+    }).pipe(
+      catchError(error => {
+        return throwError(() => error);
+      })
+    );
+  }
+
+  /**
    * Get access token
    */
   getToken(): string | null {

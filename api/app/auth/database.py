@@ -258,6 +258,7 @@ async def list_users() -> List[User]:
                 full_name=row["full_name"],
                 role=row["role"],
                 disabled=row["disabled"],
+                created_at=row["created_at"],
             )
             for row in rows
         ]

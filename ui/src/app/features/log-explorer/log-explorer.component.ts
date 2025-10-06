@@ -397,6 +397,10 @@ export class LogExplorerComponent implements OnInit, OnDestroy {
     this.authService.logout();
   }
 
+  goToChangePassword(): void {
+    this.router.navigate(['/change-password']);
+  }
+
   navigateToDashboard(): void {
     this.router.navigate(['/dashboard']);
   }

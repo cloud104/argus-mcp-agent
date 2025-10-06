@@ -67,6 +67,10 @@ export class DashboardComponent implements OnInit {
     this.authService.logout();
   }
 
+  goToChangePassword(): void {
+    this.router.navigate(['/change-password']);
+  }
+
   getSeverityKeys(): string[] {
     const dist = this.metrics()?.severity_distribution;
     return dist ? Object.keys(dist).sort() : [];

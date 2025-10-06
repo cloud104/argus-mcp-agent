@@ -9,7 +9,7 @@ global:
 image:
   registry: southamerica-east1-docker.pkg.dev/tcloud-devops/tcloud-devops
   repository: argus-api
-  tag: "20251004-154046"
+  tag: "20251006-091018"
   pullPolicy: IfNotPresent
   pullSecrets: 
     - name: gcr-json-key
@@ -23,7 +23,7 @@ mcpServer:
   image:
     registry: southamerica-east1-docker.pkg.dev/tcloud-devops/tcloud-devops
     repository: argus-mcp-server
-    tag: "20251004-154046"
+    tag: "20251006-091018"
     pullSecrets: 
       - name: gcr-json-key
 
@@ -68,7 +68,7 @@ api:
   image:
     registry: southamerica-east1-docker.pkg.dev/tcloud-devops/tcloud-devops
     repository: argus-api
-    tag: "20251004-154046"
+    tag: "20251006-091018"
     pullSecrets:
       - name: gcr-json-key
 
@@ -120,7 +120,7 @@ ui:
   image:
     registry: southamerica-east1-docker.pkg.dev/tcloud-devops/tcloud-devops
     repository: argus-ui
-    tag: "20251004-154046"
+    tag: "20251006-091018"
     pullSecrets: 
       - name: gcr-json-key
 
@@ -301,17 +301,17 @@ config:
     plannerModel:
       provider: "openai"
       classPath: "langchain_openai.ChatOpenAI"
-      modelName: "gpt-4o-mini"
+      modelName: "llama3.2"
 
     synthesizerModel:
       provider: "openai"
       classPath: "langchain_openai.ChatOpenAI"
-      modelName: "gpt-4o"
+      modelName: "llama3.2"
 
     chatModel:
       provider: "openai"
       classPath: "langchain_openai.ChatOpenAI"
-      modelName: "claude-sonnet-4"
+      modelName: "llama3.2"
       maxTokens: 4096
 
 # Secrets (should be provided via values override or external secrets)

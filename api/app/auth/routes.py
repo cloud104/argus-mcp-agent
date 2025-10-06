@@ -12,6 +12,7 @@ from app.auth.models import (
     Token,
     RefreshTokenRequest,
     PasswordChange,
+    PasswordReset,
 )
 from app.auth.security import (
     verify_password,
@@ -242,6 +243,7 @@ async def create_new_user(
             full_name=user.full_name,
             role=user.role,
             disabled=user.disabled,
+            created_at=user.created_at,
         )
 
     except UniqueViolationError as e:
@@ -300,6 +302,38 @@ async def update_user_role_endpoint(
         )
 
     return {"message": f"User {username} role updated to {role}"}
+
+
+@router.put("/users/{username}/password")
+async def admin_reset_password(
+    username: str,
+    payload: PasswordReset,
+    current_user: User = Depends(require_admin),
+):
+    """
+    Reset a user's password (admin only).
+
+    Args:
+        username: Username to update
+        payload: New password
+        current_user: Current admin user
+
+    Returns:
+        Success message
+
+    Raises:
+        HTTPException: If user not found
+    """
+    new_hashed_password = get_password_hash(payload.new_password)
+    success = await update_user_password(username, new_hashed_password)
+
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    return {"message": f"Password for {username} updated"}
 
 
 @router.put("/users/{username}/disable")
