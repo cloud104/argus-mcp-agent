@@ -83,3 +83,17 @@ helm install argus-prod ./helm/argus-agent \
 - 🏗️ [Arquitetura](app/docs/arquitetura.md)
 - ☸️ [Kubernetes](k8s/README.md)
 
+### Uso remoto do MCP Server (pt-BR)
+
+O MCP Server expõe ferramentas HTTP sob `/mcp/` e exige autenticação via Bearer token.
+
+- Endpoint base (sandbox): `https://argus.sandbox.tcloud-devops.cloudtotvs.com.br/mcp/`
+- Health (sem auth): `GET /mcp/`
+- Autenticação: obter `access_token` em `POST /api/auth/login` e enviar `Authorization: Bearer <token>`
+- Exemplos de chamadas (search_logs, retrieve_historical_context, save_analysis_summary, detect_timeseries_anomalies) e snippet `curl` estão documentados em:
+  - `mcp-server/README.md`
+
+Boas práticas:
+- Prefira janelas menores (ex.: `15m`, `1h`) para reduzir latência/custos no Elasticsearch
+- Trate `401` (auth), `503` (dependências), e configure timeouts de 30–60s
+
