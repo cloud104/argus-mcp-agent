@@ -1,8 +1,8 @@
-# Argus Agent Documentation
+# Documentação do Argus Agent
 
-Complete documentation for the Argus Agent project.
+Documentação completa do projeto Argus Agent.
 
-## Table of Contents
+## Sumário
 
 ### Começando
 - [README Principal](../README.md) - Visão geral do projeto e início rápido
@@ -10,23 +10,23 @@ Complete documentation for the Argus Agent project.
 - [CLAUDE.md](../CLAUDE.md) - Guia para o assistente Claude Code
 - **[Variáveis de Ambiente](ENV-VARIABLES.md)** - Guia completo de configuração do .env
 
-### Deployment & Infrastructure
-- [Deployment Guide](DEPLOYMENT.md) - Complete deployment instructions for all environments
-- [Containerization Guide](README-CONTAINERIZATION.md) - Docker and Kubernetes implementation details
-- [Containerization Summary](CONTAINERIZATION-SUMMARY.md) - Quick reference for containerization setup
-- **[Build Local](BUILD-LOCAL.md)** - Como construir e publicar imagens localmente no GCP Artifact Registry
-- [Kubernetes README](../k8s/README.md) - Kubernetes-specific documentation
-- **[MCP External Access](MCP-EXTERNAL-ACCESS.md)** - Expor MCP Server externamente via Ingress
+### Deploy & Infraestrutura
+- [Guia de Deploy](DEPLOYMENT.md) - Instruções completas para todos os ambientes
+- [Guia de Containerização](README-CONTAINERIZATION.md) - Detalhes de Docker e Kubernetes
+- [Resumo de Containerização](CONTAINERIZATION-SUMMARY.md) - Referência rápida
+- **[Build Local](BUILD-LOCAL.md)** - Como construir e publicar imagens localmente (GCP Artifact Registry)
+- [Kubernetes README](../k8s/README.md) - Documentação específica de Kubernetes
+- **[Acesso Externo ao MCP](MCP-EXTERNAL-ACCESS.md)** - Expor MCP Server via Ingress
 
-### Architecture & Design
-- [Architecture](../app/docs/arquitetura.md) - System architecture and implementation details (Portuguese)
-- [Use Case](../app/docs/caso-de-uso.md) - Main use case and workflows (Portuguese)
+### Arquitetura & Design
+- [Arquitetura](../app/docs/arquitetura.md) - Arquitetura do sistema e detalhes de implementação
+- [Caso de Uso](../app/docs/caso-de-uso.md) - Caso de uso principal e fluxos
 
-## Quick Links
+## Atalhos Rápidos
 
-### Development
+### Desenvolvimento
 ```bash
-# Local development (without containers)
+# Desenvolvimento local (sem containers)
 source .venv/bin/activate
 uvicorn main:app --reload  # Terminal 1
 uvicorn tools.server:app --port 8002 --reload  # Terminal 2
@@ -38,7 +38,7 @@ docker-compose up
 tilt up
 ```
 
-### Deployment
+### Deploy
 ```bash
 # Development
 helm install argus-dev ./helm/argus-agent \
@@ -51,35 +51,35 @@ helm install argus-prod ./helm/argus-agent \
   --values k8s/prod/values.yaml
 ```
 
-## Documentation Structure
+## Estrutura de Documentação
 
 ```
 docs/
-├── README.md                          # This file
-├── DEPLOYMENT.md                      # Complete deployment guide
-├── README-CONTAINERIZATION.md         # Containerization details
-└── CONTAINERIZATION-SUMMARY.md        # Quick reference
+├── README.md                          # Este arquivo
+├── DEPLOYMENT.md                      # Guia completo de deploy
+├── README-CONTAINERIZATION.md         # Detalhes de containerização
+└── CONTAINERIZATION-SUMMARY.md        # Referência rápida
 
 ../
-├── README.md                          # Main project README
-├── CLAUDE.md                          # Claude Code guide
-├── k8s/README.md                      # Kubernetes guide
-└── app/docs/                          # Architecture docs (Portuguese)
+├── README.md                          # README principal do projeto
+├── CLAUDE.md                          # Guia do Claude Code
+├── k8s/README.md                      # Guia de Kubernetes
+└── app/docs/                          # Documentos de arquitetura
     ├── arquitetura.md
     └── caso-de-uso.md
 ```
 
-## Contributing
+## Contribuição
 
-When adding new documentation:
-1. Place general docs in `/docs`
-2. Place component-specific docs near the component
-3. Update this README with links
-4. Keep docs in sync with code changes
+Ao adicionar novas documentações:
+1. Coloque documentos gerais em `/docs`
+2. Coloque docs específicas próximas ao componente
+3. Atualize este README com os links
+4. Mantenha os docs sincronizados com as mudanças no código
 
-## Support
+## Suporte
 
-For issues or questions:
-- Check existing documentation
-- Review [troubleshooting sections](DEPLOYMENT.md#troubleshooting)
-- Create an issue in the repository
+Para dúvidas ou problemas:
+- Consulte a documentação existente
+- Revise as [seções de troubleshooting](DEPLOYMENT.md#solução-de-problemas)
+- Abra um issue no repositório

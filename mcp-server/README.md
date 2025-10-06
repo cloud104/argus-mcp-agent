@@ -1,6 +1,6 @@
 # MCP Server - Uso Remoto
 
-Este documento descreve como usar o MCP Server remotamente no ambiente sandbox.
+Este documento descreve como usar o MCP Server remotamente no ambiente sandbox e a visão completa do serviço.
 
 ## Endpoint
 
@@ -80,72 +80,56 @@ curl -s -X POST https://argus.sandbox.tcloud-devops.cloudtotvs.com.br/mcp/tools/
   -d '{"index":"logs_prod_app","window":"1h"}'
 ```
 
-## Boas práticas
+## Visão Geral do Servidor MCP
 
-- Prefira janelas menores (ex.: `15m`, `1h`) para reduzir latência/custo no Elasticsearch.
-- Paralelize leituras quando necessário, respeitando limites do cluster.
-- Trate erros: `401` (auth), `503` (dependências indisponíveis), `429` (limites, se configurado).
+Servidor FastMCP que expõe ferramentas para análise de logs, RAG e detecção de anomalias.
 
-# Argus MCP Server
+### Arquitetura
 
-FastMCP server exposing tools for log analysis, RAG, and anomaly detection.
+- **Framework**: FastMCP (sobre FastAPI)
+- **Fontes de Dados**:
+  - Elasticsearch para logs
+  - ChromaDB para armazenamento vetorial (RAG)
+- **ML**: scikit-learn para detecção de anomalias
 
-## Overview
-
-The MCP (Model Context Protocol) server provides tools that the main API agent can invoke:
-
-- **search_logs**: Query Elasticsearch for recent logs
-- **retrieve_historical_context**: Query ChromaDB RAG for historical analysis summaries
-- **save_analysis_summary**: Persist analysis summaries to RAG
-- **detect_timeseries_anomalies**: ML-based anomaly detection using IsolationForest
-
-## Architecture
-
-- **Framework**: FastMCP (built on FastAPI)
-- **Data Sources**:
-  - Elasticsearch for logs
-  - ChromaDB for RAG vector storage
-  - InfluxDB for metrics (future)
-- **ML**: scikit-learn for anomaly detection
-
-## Directory Structure
+### Estrutura de Diretórios
 
 ```
 mcp-server/
-├── tools/              # MCP tool implementations
-│   ├── server.py       # Main FastMCP server
-│   ├── es_client.py    # Elasticsearch client
-│   ├── rag.py          # ChromaDB RAG implementation
-│   └── anomaly.py      # Anomaly detection
-├── requirements.txt    # Python dependencies
-├── Dockerfile          # Production image
-└── Dockerfile.dev      # Development image
+├── tools/              # Implementações das tools MCP
+│   ├── server.py       # Servidor FastMCP principal
+│   ├── auth.py         # Autenticação e validação de token
+│   ├── rag_manager.py  # Integração com ChromaDB
+│   └── resilience.py   # Requisições resilientes/retentativas
+├── requirements.txt    # Dependências Python
+├── Dockerfile          # Imagem de produção
+└── Dockerfile.dev      # Imagem de desenvolvimento
 ```
 
-## Running Locally
+## Executando Localmente
 
-### Development Mode
+### Modo de Desenvolvimento
 
 ```bash
-# Install dependencies
+# Instalar dependências
 cd mcp-server
 pip install -r requirements.txt
 
-# Run server
+# Executar servidor
 uvicorn tools.server:app --host 0.0.0.0 --port 8002 --reload
 ```
 
-### Docker Development
+### Desenvolvimento com Docker
 
 ```bash
-# Build development image
+# Build imagem de desenvolvimento
 docker build -f mcp-server/Dockerfile.dev -t argus-mcp-server:dev ./mcp-server
 
-# Run with docker-compose
+# Subir com docker-compose
 docker-compose -f docker-compose.dev.yml up mcp-server
 ```
 
-## Environment Variables
+## Variáveis de Ambiente
 
 ```bash
 # Elasticsearch
@@ -155,91 +139,83 @@ ES_PASSWORD=your-password
 ES_TIMEOUT=30
 
 # ChromaDB
-CHROMA_MODE=embedded  # or standalone for containers
+CHROMA_MODE=embedded  # ou standalone para containers
 CHROMA_HOST=argus-chromadb
 CHROMA_PORT=8000
 ```
 
-## Available Tools
+## Tools Disponíveis
 
 ### search_logs
+Busca até 200 logs recentes no Elasticsearch dentro de uma janela de tempo.
 
-Fetches up to 200 recent logs from Elasticsearch within a time window.
+Parâmetros:
+- `index` (string): nome do índice no ES
+- `window` (string): janela de tempo (ex.: "1h", "30m")
 
-**Parameters:**
-- `index` (string): Elasticsearch index name
-- `window` (integer): Time window in hours (default: 1)
-
-**Returns:**
-- List of log documents with timestamps, messages, severity, etc.
+Retorno: lista de documentos com timestamp, mensagem, severidade etc.
 
 ### retrieve_historical_context
+Consulta o RAG por resumos históricos semelhantes à consulta.
 
-Queries RAG for historical analysis summaries similar to the query.
+Parâmetros:
+- `index` (string): índice ES (deriva o nome da coleção)
+- `query` (string): texto de pesquisa
 
-**Parameters:**
-- `index` (string): Elasticsearch index name (derives collection)
-- `query` (string): Search query text
-
-**Returns:**
-- List of similar historical analyses with metadata
+Retorno: lista de análises históricas com metadados
 
 ### save_analysis_summary
+Persiste um resumo de análise no banco vetorial (RAG).
 
-Persists an analysis summary to the RAG vector database.
+Parâmetros:
+- `index` (string)
+- `summary` (string)
 
-**Parameters:**
-- `index` (string): Elasticsearch index name
-- `summary` (string): Analysis summary text to store
-
-**Returns:**
-- Success confirmation with document ID
+Retorno: confirmação de sucesso
 
 ### detect_timeseries_anomalies
+Detecção de anomalias (IsolationForest) em série temporal.
 
-ML-based anomaly detection using IsolationForest.
+Parâmetros:
+- `data` (array): pontos de série temporal
+- `contamination` (float): proporção esperada de anomalias (0–1)
 
-**Parameters:**
-- `data` (array): Time series data points
-- `contamination` (float): Expected proportion of anomalies (0-1)
+Retorno: registros marcados como anomalia
 
-**Returns:**
-- Array of boolean flags (true = anomaly)
-
-## Testing
+## Testes Rápidos
 
 ```bash
-# Test server health
+# Health do servidor
 curl http://localhost:8002/
 
-# Test MCP endpoint
+# Endpoint MCP
 curl http://localhost:8002/mcp/
 ```
 
-## Deployment
+## Deploy
 
-### Docker Production
+### Docker (produção)
 
 ```bash
-# Build production image
+# Build da imagem de produção
 docker build -f mcp-server/Dockerfile -t argus-mcp-server:latest ./mcp-server
 
-# Push to registry
+# Push para o registry
 docker push southamerica-east1-docker.pkg.dev/tcloud-devops/tcloud-devops/argus-mcp-server:latest
 ```
 
 ### Kubernetes
 
-See `/k8s/dev/mcp-server-deployment.yaml` for K8s deployment manifests.
+Consulte `/k8s/dev/mcp-server-deployment.yaml` para os manifests de K8s.
 
 ## Health Checks
 
 - `GET /health/live` - Liveness probe
-- `GET /health/ready` - Readiness probe (checks ES, ChromaDB)
-- `GET /health/startup` - Startup probe
+- `GET /health/ready` - Readiness (verifica ES, ChromaDB)
+- `GET /health/startup` - Startup
 
-## Protocol
+## Protocolo
 
-This server implements the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/), allowing LLM agents to invoke tools via standardized interfaces.
+Este servidor implementa o [Model Context Protocol (MCP)](https://modelcontextprotocol.io/), permitindo que agentes LLM invoquem ferramentas por interfaces padronizadas.
 
-The main API connects to this server using `langchain_mcp_adapters.client.MultiServerMCPClient`.
+A API principal conecta-se a este servidor usando `langchain_mcp_adapters.client.MultiServerMCPClient`.
