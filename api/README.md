@@ -1,25 +1,25 @@
 # Argus API
 
-FastAPI application providing the main SRE Agent API with LangGraph workflows.
+Aplicação FastAPI que expõe a API principal do Agente SRE com fluxos orquestrados em LangGraph.
 
-## Overview
+## Visão Geral
 
-The API service handles:
-- **Authentication**: JWT-based user authentication with PostgreSQL
-- **Log Analysis**: Initial log search and deep dive analysis
-- **Chat Interface**: Conversational AI interface with tool calling
-- **Log Explanation**: Single log line explanations
-- **MCP Integration**: Connects to MCP server for tool execution
+A API é responsável por:
+- **Autenticação**: JWT com PostgreSQL para gestão de usuários
+- **Análise de Logs**: busca inicial e análise aprofundada
+- **Chat**: interface conversacional com chamadas de ferramentas
+- **Explicação de Log**: explicação de uma linha específica
+- **Integração MCP**: comunicação com o MCP Server para executar ferramentas
 
-## Architecture
+## Arquitetura
 
 - **Framework**: FastAPI
-- **LLM Orchestration**: LangGraph for agent workflows
-- **Authentication**: JWT tokens with refresh support
-- **Database**: PostgreSQL for user management
-- **LLM Providers**: OpenAI, Google, Anthropic
+- **Orquestração LLM**: LangGraph para os fluxos do agente
+- **Autenticação**: tokens JWT com refresh
+- **Banco de Dados**: PostgreSQL para usuários/roles
+- **Provedores LLM**: OpenAI, Google, Anthropic
 
-## Directory Structure
+## Estrutura de Diretórios
 
 ```
 api/
@@ -36,32 +36,32 @@ api/
 └── Dockerfile.dev      # Development image with debugging
 ```
 
-## Running Locally
+## Executando Localmente
 
-### Development Mode
+### Modo de Desenvolvimento
 
 ```bash
-# Install dependencies
+# Instalar dependências
 cd api
 pip install -r requirements.txt
 
-# Run with hot-reload
+# Executar com hot-reload
 uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-### Docker Development
+### Desenvolvimento com Docker
 
 ```bash
-# Build development image
+# Build da imagem de desenvolvimento
 docker build -f api/Dockerfile.dev -t argus-api:dev ./api
 
-# Run with docker-compose
+# Subir com docker-compose
 docker-compose -f docker-compose.dev.yml up api
 ```
 
-## Environment Variables
+## Variáveis de Ambiente
 
-Key environment variables (see `.env.example`):
+Principais variáveis (ver `.env.example`):
 
 ```bash
 # API Keys
@@ -85,64 +85,70 @@ API_TIMEOUT_DEEP_DIVE=120
 API_TIMEOUT_CHAT=120
 ```
 
-## API Endpoints
+## Endpoints da API
 
-### Authentication
-- `POST /auth/register` - Register new user
-- `POST /auth/login` - Login and get JWT tokens
-- `POST /auth/refresh` - Refresh access token
-- `GET /auth/me` - Get current user info
+### Autenticação
+- `POST /auth/login` - Login e obtenção de tokens JWT
+- `POST /auth/refresh` - Renovar token de acesso
+- `GET /auth/me` - Dados do usuário atual
+- `POST /auth/change-password` - Trocar a própria senha
+- `POST /auth/change-email` - Trocar o próprio e-mail
+- `POST /auth/users` - Criar usuário (admin)
+- `PUT /auth/users/{username}/password` - Redefinir senha (admin)
+- `PUT /auth/users/{username}/email` - Alterar e-mail (admin)
+- `PUT /auth/users/{username}/role` - Alterar role (admin)
+- `PUT /auth/users/{username}/disable|enable` - Desativar/ativar usuário (admin)
 
-### Analysis
-- `POST /initial-analysis` - Search logs via MCP
-- `POST /deep-dive` - Deep analysis with LLM synthesis
-- `POST /explain-log-line` - Explain single log line
-- `POST /chat` - Conversational chat with context
+### Análises
+- `POST /initial-analysis` - Busca de logs via MCP
+- `POST /deep-dive` - Análise aprofundada com síntese do LLM
+- `POST /explain-log-line` - Explica uma linha de log
+- `POST /chat` - Chat com contexto e ferramentas
 
-### Health
+### Saúde
 - `GET /health/live` - Liveness probe
-- `GET /health/ready` - Readiness probe (checks dependencies)
-- `GET /health/startup` - Startup probe (initialization status)
+- `GET /health/ready` - Readiness (verifica dependências)
+- `GET /health/startup` - Startup (estado de inicialização)
 
 ## Workflows
 
 ### Initial Analysis
-Searches logs via `search_logs` tool, returns raw data.
+Busca logs via ferramenta `search_logs`, retorna dados brutos.
 
 ### Deep Dive
-Performs LLM-powered analysis with entity extraction and relationship mapping.
+Análise com LLM, extração de entidades e relações.
 
 ### Chat
-Conversational interface with tool-calling capabilities and context injection.
+Interface conversacional com chamadas de ferramentas e injeção de contexto.
 
-## Testing
+## Testes
 
 ```bash
-# Run tests
+# Executar testes
 pytest -v
 
-# With coverage
+# Com cobertura
 pytest --cov=app --cov-report=html
 ```
 
-## Deployment
+## Deploy
 
-### Docker Production
+### Docker (produção)
 
 ```bash
-# Build production image
+# Build da imagem de produção
 docker build -f api/Dockerfile -t argus-api:latest ./api
 
-# Push to registry
+# Push para o registry
 docker push southamerica-east1-docker.pkg.dev/tcloud-devops/tcloud-devops/argus-api:latest
 ```
 
 ### Kubernetes
 
-See `/k8s/dev/api-deployment.yaml` for K8s deployment manifests.
+Consulte `/k8s/dev/api-deployment.yaml` para os manifests de K8s.
 
-## Configuration Files
+## Arquivos de Configuração
 
-- `config/settings.json` - MCP server configuration
-- `config/models.json` - LLM model definitions
-- `prompts/*.md` - Prompt templates for each workflow
+- `config/settings.json` - Configurações do MCP
+- `config/models.json` - Definições de modelos LLM
+- `prompts/*.md` - Templates de prompts por workflow
