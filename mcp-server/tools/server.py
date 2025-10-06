@@ -42,7 +42,7 @@ async def _ensure_es() -> AsyncElasticsearch:
             ES_HOST,
             basic_auth=(ES_USER, ES_PASSWORD),
             verify_certs=False,
-            request_timeout=ES_TIMEOUT,
+            request_timeout=max(ES_TIMEOUT, 60),
         )
         info = await _es.info()
         print(f"[tools] ES conectado: cluster='{info.get('cluster_name')}'")
@@ -78,11 +78,13 @@ def _collection_from_index(index: str) -> str:
 async def search_logs(index: str, window: str = "2h") -> Dict[str, Any]:
     """Busca até 200 logs recentes do índice dentro da janela (ex.: '2h', '15m')."""
     es = await _ensure_es()
+    # Garante track_total_hits e timezone consistente
     resp = await es.search(
         index=index,
-        query={"range": {"timestamp": {"gte": f"now-{window}", "lte": "now"}}},
+        query={"range": {"timestamp": {"gte": f"now-{window}", "lte": "now", "time_zone": "+00:00"}}},
         size=200,
         sort=[{"timestamp": {"order": "desc"}}],
+        track_total_hits=True,
     )
     hits = (resp.get("hits") or {}).get("hits", [])
     return {"logs_encontrados": [h.get("_source", {}) for h in hits]}

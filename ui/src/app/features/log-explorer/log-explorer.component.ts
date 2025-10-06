@@ -2,7 +2,7 @@ import { Component, OnInit, AfterViewInit, OnDestroy, signal, computed, effect }
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Observable } from 'rxjs';
+import { Observable, Subscription } from 'rxjs';
 import { ScrollingModule } from '@angular/cdk/scrolling';
 import { AuthService, User } from '../../core/auth/auth.service';
 import { ApiService, LogEntry, InitialAnalysisResponse } from '../../core/api/api.service';
@@ -52,6 +52,9 @@ export class LogExplorerComponent implements OnInit, OnDestroy {
   currentPage = signal(1);
   itemsPerPage = signal(50);
   itemsPerPageOptions = [25, 50, 100, 200];
+
+  // Subscription de busca atual para evitar respostas fora de ordem
+  private currentSearchSub?: Subscription;
 
   // Computed
   filteredLogs = computed(() => {
@@ -182,21 +185,34 @@ export class LogExplorerComponent implements OnInit, OnDestroy {
     const index = `${ccode}_${topology}_logs`;
 
     // Calculate time window from date range
+    // Normaliza para UTC para evitar discrepâncias por fuso
     const start = new Date(startDate);
     const end = new Date(endDate);
-    const diffMs = end.getTime() - start.getTime();
+    const startUtcIso = new Date(start.getTime() - start.getTimezoneOffset() * 60000).toISOString();
+    const endUtcIso = new Date(end.getTime() - end.getTimezoneOffset() * 60000).toISOString();
+    const diffMs = new Date(endUtcIso).getTime() - new Date(startUtcIso).getTime();
     const diffHours = Math.ceil(diffMs / (1000 * 60 * 60));
     const window = `${Math.max(1, diffHours)}h`;
 
     this.currentIndex.set(index);
     this.currentWindow.set(window);
 
+    // Cancelar busca anterior (evita condições de corrida)
+    if (this.currentSearchSub) {
+      this.currentSearchSub.unsubscribe();
+      this.currentSearchSub = undefined;
+    }
+
+    // Resetar estado visual e paginação
     this.isSearching.set(true);
     this.errorMessage.set(null);
+    this.allLogs.set([]);
+    this.currentPage.set(1);
+    this.filterPills.set([]);
 
     const sessionId = 'session_' + Math.random().toString(36).substr(2, 9);
 
-    this.apiService.initialAnalysis({
+    this.currentSearchSub = this.apiService.initialAnalysis({
       msg: 'Análise inicial',
       index,
       window,
@@ -725,6 +741,9 @@ export class LogExplorerComponent implements OnInit, OnDestroy {
     // Cleanup chart
     if (this.logHistogramChart) {
       this.logHistogramChart.destroy();
+    }
+    if (this.currentSearchSub) {
+      this.currentSearchSub.unsubscribe();
     }
   }
 }

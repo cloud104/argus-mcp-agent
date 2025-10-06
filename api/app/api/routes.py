@@ -23,6 +23,23 @@ class AnalysisRequest(BaseModel):
     window: str
     session_id: str
 
+    def normalized(self) -> "AnalysisRequest":
+        # Evita janela vazia/negativa; garante formato h/d mínimo 1h
+        win = (self.window or "1h").strip()
+        try:
+            if win.endswith("h"):
+                hours = max(1, int(win[:-1]))
+                win = f"{hours}h"
+            elif win.endswith("d"):
+                days = max(1, int(win[:-1]))
+                win = f"{days}d"
+            else:
+                win = "1h"
+        except Exception:
+            win = "1h"
+        self.window = win
+        return self
+
 class DeepDiveRequest(BaseModel):
     msg: str
     index: str
@@ -45,6 +62,7 @@ async def initial_analysis(
     current_user: User = Depends(get_current_user)
 ):
     try:
+        request = request.normalized()
         tool_params = {"index": request.index, "window": request.window}
         result = await asyncio.wait_for(
             run_initial_analysis(request.msg, request.session_id, tool_params),
