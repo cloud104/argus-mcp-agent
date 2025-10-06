@@ -12,15 +12,15 @@ Este projeto implementa um agente de IA para análise de logs, construído com u
 ```mermaid
 flowchart LR
   subgraph UI
-    A[Frontend Angular<br/>Browser]
+    A[Frontend Angular Browser]
   end
 
   subgraph API
-    APIRoutes[FastAPI /api (8000)<br/>Auth, Metrics, Users]
+    APIRoutes[FastAPI API 8000 - Auth Metrics Users]
   end
 
   subgraph MCP
-    Tools[MCP Server /mcp (8002)<br/>FastMCP Tools: search_logs / RAG / anomalies]
+    Tools[MCP Server MCP 8002 - FastMCP Tools: search_logs RAG anomalies]
   end
 
   subgraph Data
@@ -30,12 +30,12 @@ flowchart LR
   end
 
   A -->|HTTP| APIRoutes
-  A -->|HTTP| MCP
+  A -->|HTTP| Tools
   APIRoutes <-->|JWT| A
-  MCP <-->|JWT/Service Token| A
+  Tools <-->|JWT or Service Token| A
 
-  MCP -->|Query| ES
-  MCP -->|RAG| CH
+  Tools -->|Query| ES
+  Tools -->|RAG| CH
   APIRoutes -->|Users/Auth| PG
 ```
 
