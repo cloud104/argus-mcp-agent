@@ -7,6 +7,38 @@ Este projeto implementa um agente de IA para análise de logs, construído com u
 - **Servidor de Ferramentas (`tools/server.py`):** Um servidor MCP (FastMCP) que expõe as ferramentas para o agente na porta 8002.
 - **RAG com ChromaDB:** Usa ChromaDB para criar uma base de conhecimento persistente com o histórico das análises, guardada na pasta `chroma_db`.
 
+### Diagrama (visão de alto nível)
+
+```mermaid
+flowchart LR
+  subgraph UI[Frontend Angular]
+    A[Browser]
+  end
+
+  subgraph API[FastAPI /api (8000)]
+    APIRoutes[Auth, Metrics, Users]
+  end
+
+  subgraph MCP[MCP Server /mcp (8002)]
+    Tools[FastMCP Tools\nsearch_logs / RAG / anomalies]
+  end
+
+  subgraph Data[Data Stores]
+    ES[(Elasticsearch)]
+    CH[(ChromaDB)]
+    PG[(PostgreSQL)]
+  end
+
+  A -->|HTTP| APIRoutes
+  A -->|HTTP| MCP
+  APIRoutes <-->|JWT| A
+  MCP <-->|JWT/Service Token| A
+
+  MCP -->|Query| ES
+  MCP -->|RAG| CH
+  APIRoutes -->|Users/Auth| PG
+```
+
 ## Setup
 
 1.  **Crie e entre no diretório do projeto:**
@@ -75,6 +107,33 @@ helm install argus-prod ./helm/argus-agent \
   --values k8s/prod/values.yaml
 ```
 
+### Diagrama (Kubernetes/Helm)
+
+```mermaid
+flowchart TB
+  subgraph Namespace[argus]
+    subgraph Deployments
+      API[Deployment: argus-api]\nPods x N
+      MCP[Deployment: argus-mcp-server]\nPods x N
+      UI[Deployment: argus-ui]\nPod x 1
+      CHD[Deployment: chromadb]
+      PGD[Deployment: postgres]
+    end
+
+    SVC_API[Service: api 8000]
+    SVC_MCP[Service: mcp 8002]
+    SVC_UI[Service: ui 80]
+    Ingress[Ingress NGINX]
+  end
+
+  UI --> SVC_UI --> Ingress
+  API --> SVC_API --> Ingress
+  MCP --> SVC_MCP --> Ingress
+  MCP --> CHD
+  MCP --> ES[(Elastic externo)]
+  API --> PGD
+```
+
 ## Documentação
 
 - 📚 [Documentação Completa](docs/README.md)
@@ -96,4 +155,24 @@ O MCP Server expõe ferramentas HTTP sob `/mcp/` e exige autenticação via Bear
 Boas práticas:
 - Prefira janelas menores (ex.: `15m`, `1h`) para reduzir latência/custos no Elasticsearch
 - Trate `401` (auth), `503` (dependências), e configure timeouts de 30–60s
+
+### Sequência de chamada MCP com autenticação
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant Dev as Cliente (Dev)
+  participant API as API /api
+  participant MCP as MCP /mcp
+  participant ES as Elasticsearch
+  participant CH as ChromaDB
+
+  Dev->>API: POST /auth/login { username, password }
+  API-->>Dev: 200 { access_token }
+  Dev->>MCP: POST /mcp/tools/search_logs (Bearer access_token)
+  MCP->>ES: search(index, window)
+  ES-->>MCP: hits
+  MCP-->>Dev: { logs_encontrados: [...] }
+  Note over MCP,CH: Para tools de RAG, MCP interage com ChromaDB
+```
 
