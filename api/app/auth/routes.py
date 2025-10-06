@@ -14,6 +14,7 @@ from app.auth.models import (
     PasswordChange,
     PasswordReset,
     EmailUpdate,
+    RoleUpdate,
 )
 from app.auth.security import (
     verify_password,
@@ -297,7 +298,7 @@ async def get_all_users(current_user: User = Depends(require_admin)):
 @router.put("/users/{username}/role")
 async def update_user_role_endpoint(
     username: str,
-    role: str,
+    payload: RoleUpdate,
     current_user: User = Depends(require_admin),
 ):
     """
@@ -314,6 +315,7 @@ async def update_user_role_endpoint(
     Raises:
         HTTPException: If user not found
     """
+    role = payload.role
     if role not in ["admin", "developer", "viewer"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

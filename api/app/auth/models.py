@@ -70,3 +70,8 @@ class PasswordReset(BaseModel):
 class EmailUpdate(BaseModel):
     """Model for email update requests."""
     new_email: EmailStr
+
+
+class RoleUpdate(BaseModel):
+    """Model for user role update requests."""
+    role: Literal["admin", "developer", "viewer"]
