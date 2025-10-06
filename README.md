@@ -11,19 +11,19 @@ Este projeto implementa um agente de IA para análise de logs, construído com u
 
 ```mermaid
 flowchart LR
-  subgraph UI[Frontend Angular]
-    A[Browser]
+  subgraph UI
+    A[Frontend Angular<br/>Browser]
   end
 
-  subgraph API[FastAPI /api (8000)]
-    APIRoutes[Auth, Metrics, Users]
+  subgraph API
+    APIRoutes[FastAPI /api (8000)<br/>Auth, Metrics, Users]
   end
 
-  subgraph MCP[MCP Server /mcp (8002)]
-    Tools[FastMCP Tools<br/>search_logs / RAG / anomalies]
+  subgraph MCP
+    Tools[MCP Server /mcp (8002)<br/>FastMCP Tools: search_logs / RAG / anomalies]
   end
 
-  subgraph Data[Data Stores]
+  subgraph Data
     ES[(Elasticsearch)]
     CH[(ChromaDB)]
     PG[(PostgreSQL)]
