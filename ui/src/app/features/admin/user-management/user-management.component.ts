@@ -15,6 +15,7 @@ export class UserManagementComponent implements OnInit {
   users = signal<User[]>([]);
   isLoading = signal(false);
   showCreateModal = signal(false);
+  showResetModal = signal(false);
   errorMessage = signal<string | null>(null);
   successMessage = signal<string | null>(null);
 
@@ -28,7 +29,7 @@ export class UserManagementComponent implements OnInit {
     this.createUserForm = this.fb.group({
       username: ['', [Validators.required, Validators.minLength(3)]],
       email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required, Validators.minLength(6)]],
+      password: ['', [Validators.required, Validators.minLength(8)]],
       role: ['viewer', Validators.required]
     });
   }
@@ -66,6 +67,43 @@ export class UserManagementComponent implements OnInit {
     this.createUserForm.reset();
   }
 
+  // Reset password modal state
+  selectedUserForReset: User | null = null;
+
+  openResetModal(user: User): void {
+    this.selectedUserForReset = user;
+    this.showResetModal.set(true);
+  }
+
+  closeResetModal(): void {
+    this.selectedUserForReset = null;
+    this.showResetModal.set(false);
+  }
+
+  onResetPassword(newPassword: string): void {
+    if (!this.selectedUserForReset) return;
+    if (!newPassword || newPassword.length < 8) {
+      this.errorMessage.set('Senha deve ter no mínimo 8 caracteres');
+      return;
+    }
+
+    this.isLoading.set(true);
+    this.userAdminService.resetUserPassword(this.selectedUserForReset.username, newPassword).subscribe({
+      next: () => {
+        this.successMessage.set('Senha atualizada com sucesso!');
+        this.isLoading.set(false);
+        this.closeResetModal();
+        setTimeout(() => this.successMessage.set(null), 3000);
+      },
+      error: (error) => {
+        const detail = error?.error?.detail;
+        const message = typeof detail === 'string' ? detail : (error?.message || 'Erro ao atualizar senha');
+        this.errorMessage.set(message);
+        this.isLoading.set(false);
+      }
+    });
+  }
+
   onCreateUser(): void {
     if (this.createUserForm.invalid) return;
 
@@ -80,7 +118,21 @@ export class UserManagementComponent implements OnInit {
         setTimeout(() => this.successMessage.set(null), 3000);
       },
       error: (error) => {
-        this.errorMessage.set(error.error?.detail || 'Erro ao criar usuário');
+        // Extrai mensagens de erro retornadas pelo FastAPI (por vezes como array de objetos)
+        const detail = error?.error?.detail;
+        let message = 'Erro ao criar usuário';
+        if (typeof detail === 'string') {
+          message = detail;
+        } else if (Array.isArray(detail)) {
+          message = detail
+            .map((d: any) => d?.msg || d?.detail || JSON.stringify(d))
+            .join(' | ');
+        } else if (detail?.message) {
+          message = detail.message;
+        } else if (error?.message) {
+          message = error.message;
+        }
+        this.errorMessage.set(message);
         this.isLoading.set(false);
       }
     });
