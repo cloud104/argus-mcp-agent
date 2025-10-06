@@ -20,7 +20,7 @@ flowchart LR
   end
 
   subgraph MCP[MCP Server /mcp (8002)]
-    Tools[FastMCP Tools\nsearch_logs / RAG / anomalies]
+    Tools[FastMCP Tools<br/>search_logs / RAG / anomalies]
   end
 
   subgraph Data[Data Stores]
@@ -113,9 +113,9 @@ helm install argus-prod ./helm/argus-agent \
 flowchart TB
   subgraph Namespace[argus]
     subgraph Deployments
-      API[Deployment: argus-api]\nPods x N
-      MCP[Deployment: argus-mcp-server]\nPods x N
-      UI[Deployment: argus-ui]\nPod x 1
+      API[Deployment: argus-api<br/>Pods x N]
+      MCP[Deployment: argus-mcp-server<br/>Pods x N]
+      UI[Deployment: argus-ui<br/>Pod x 1]
       CHD[Deployment: chromadb]
       PGD[Deployment: postgres]
     end
