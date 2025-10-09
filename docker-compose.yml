@@ -60,7 +60,7 @@ services:
       start_period: 15s
 
   # API (FastAPI + LangGraph)
-  api:
+  argus-agent-api:
     image: southamerica-east1-docker.pkg.dev/tcloud-devops/tcloud-devops/argus-api:latest
     container_name: argus-api
     build:
@@ -98,7 +98,7 @@ services:
     networks:
       - argus-network
     depends_on:
-      - api
+      - argus-agent-api
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/"]
       interval: 10s

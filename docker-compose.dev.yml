@@ -59,7 +59,7 @@ services:
         condition: service_started
 
   # API (Development)
-  api:
+  argus-agent-api:
     image: argus-api:dev
     container_name: argus-api-dev
     build:
@@ -100,7 +100,7 @@ services:
     networks:
       - argus-network
     depends_on:
-      - api
+      - argus-agent-api
 
 networks:
   argus-network:
