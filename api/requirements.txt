@@ -36,7 +36,7 @@ typing-extensions==4.15.0
 elasticsearch==8.17.2
 
 # Authentication & Database
-python-jose[cryptography]==3.3.0
+python-jose[cryptography]==3.4.0
 passlib[bcrypt]==1.7.4
 bcrypt==4.2.1
 asyncpg==0.30.0
