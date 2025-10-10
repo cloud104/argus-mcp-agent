@@ -65,3 +65,6 @@ helm/*/.helmignore
 # Logs
 *.log
 logs/
+
+# Documentation
+CLAUDE.md
