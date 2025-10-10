@@ -30,4 +30,4 @@ numpy==2.3.3
 typing-extensions==4.15.0
 
 # Authentication (JWT validation)
-python-jose[cryptography]==3.3.0
+python-jose[cryptography]==3.4.0
