@@ -21,7 +21,7 @@ image:
 mcpServer:
   enabled: true
   name: argus-mcp-server
-  replicaCount: 2
+  replicaCount: 1
 
   image:
     registry: southamerica-east1-docker.pkg.dev/tcloud-devops/tcloud-devops
@@ -35,6 +35,7 @@ mcpServer:
     port: 8002
     targetPort: 8002
     annotations: {}
+    sessionAffinity: ClientIP
 
   resources:
     requests:

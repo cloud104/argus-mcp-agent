@@ -72,27 +72,5 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: {{ include "argus-agent.fullname" . }}-chromadb
-  namespace: {{ .Values.global.namespace }}
-  labels:
-    {{- include "argus-agent.labels" . | nindent 4 }}
-    app: {{ .Values.chromadb.name }}
-  {{- with .Values.chromadb.service.annotations }}
-  annotations:
-    {{- toYaml . | nindent 4 }}
-  {{- end }}
-spec:
-  type: {{ .Values.chromadb.service.type }}
-  ports:
-  - port: {{ .Values.chromadb.service.port }}
-    targetPort: 8000
-    protocol: TCP
-    name: http
-  selector:
-    {{- include "argus-agent.selectorLabels" . | nindent 4 }}
-    app: {{ .Values.chromadb.name }}
+# Service definido centralmente em templates/services.yaml
 {{- end }}
