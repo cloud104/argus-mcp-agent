@@ -1,0 +1,6 @@
+# Modelos GGUF (arquivos grandes)
+*.gguf
+
+# Arquivos temporários
+*.tmp
+*.log

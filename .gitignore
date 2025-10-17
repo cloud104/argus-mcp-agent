@@ -68,3 +68,10 @@ logs/
 
 # Documentation
 CLAUDE.md
+
+# LLM Models (large files)
+*.gguf
+*.tar.gz
+models/
+ollama-models/
+gguf-models/

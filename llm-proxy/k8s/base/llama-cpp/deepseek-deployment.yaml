@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llama-cpp-deepseek
+  namespace: argus
+  labels:
+    app: llama-cpp-deepseek
+    model: deepseek-r1-1.5b
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: llama-cpp-deepseek
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: llama-cpp-deepseek
+        model: deepseek-r1-1.5b
+    spec:
+      containers:
+      - name: llama-cpp-server
+        image: ghcr.io/ggerganov/llama.cpp:server
+        imagePullPolicy: IfNotPresent
+        args:
+          - "--host"
+          - "0.0.0.0"
+          - "--port"
+          - "8080"
+          - "--model"
+          - "/models/deepseek-r1-distill-qwen-1.5b-q4_k_m.gguf"
+          - "--ctx-size"
+          - "4096"
+          - "--n-gpu-layers"
+          - "0"
+          - "--threads"
+          - "4"
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        env:
+        - name: LLAMA_ARG_HOST
+          value: "0.0.0.0"
+        - name: LLAMA_ARG_PORT
+          value: "8080"
+        volumeMounts:
+        - name: llama-models
+          mountPath: /models
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 2
+        resources:
+          limits:
+            memory: "6Gi"
+            cpu: "2000m"
+          requests:
+            memory: "4Gi"
+            cpu: "1000m"
+      volumes:
+      - name: llama-models
+        persistentVolumeClaim:
+          claimName: llama-models-pvc
