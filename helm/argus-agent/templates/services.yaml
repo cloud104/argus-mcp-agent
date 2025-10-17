@@ -13,6 +13,9 @@ metadata:
   {{- end }}
 spec:
   type: {{ .Values.mcpServer.service.type }}
+  {{- if .Values.mcpServer.service.sessionAffinity }}
+  sessionAffinity: {{ .Values.mcpServer.service.sessionAffinity }}
+  {{- end }}
   ports:
   - port: {{ .Values.mcpServer.service.port }}
     targetPort: {{ .Values.mcpServer.service.targetPort }}

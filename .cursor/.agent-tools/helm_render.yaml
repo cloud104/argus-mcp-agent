@@ -1,0 +1,925 @@
+---
+# Source: argus-agent/templates/namespace.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: argus
+  labels:
+    name: argus
+    helm.sh/chart: argus-agent-0.1.0
+    app.kubernetes.io/name: argus-agent
+    app.kubernetes.io/instance: argus-agent
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: Helm
+---
+# Source: argus-agent/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: argus-agent
+  namespace: argus
+  labels:
+    helm.sh/chart: argus-agent-0.1.0
+    app.kubernetes.io/name: argus-agent
+    app.kubernetes.io/instance: argus-agent
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: Helm
+---
+# Source: argus-agent/templates/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argus-agent-config
+  namespace: argus
+  labels:
+    helm.sh/chart: argus-agent-0.1.0
+    app.kubernetes.io/name: argus-agent
+    app.kubernetes.io/instance: argus-agent
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: Helm
+data:
+  PYTHONUNBUFFERED: "1"
+  PYTHONDONTWRITEBYTECODE: "1"
+  MCP_SERVER_URL: "http://argus-agent-mcp-server:8002/mcp/"
+---
+# Source: argus-agent/templates/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argus-agent-settings
+  namespace: argus
+  labels:
+    helm.sh/chart: argus-agent-0.1.0
+    app.kubernetes.io/name: argus-agent
+    app.kubernetes.io/instance: argus-agent
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: Helm
+data:
+  settings.json: |
+    {
+      "mcp_servers": {
+        "tools": {
+          "transport": "streamable_http",
+          "url": "http://argus-agent-mcp-server:8002/mcp/"
+        }
+      }
+    }
+
+  models.json: |
+    {
+      "planner_model": {
+        "provider": "openai",
+        "class_path": "langchain_openai.ChatOpenAI",
+        "model_name": "llama3.2"
+      },
+      "synthesizer_model": {
+        "provider": "openai",
+        "class_path": "langchain_openai.ChatOpenAI",
+        "model_name": "llama3.2"
+      },
+      "chat_model": {
+        "provider": "openai",
+        "class_path": "langchain_openai.ChatOpenAI",
+        "model_name": "llama3.2",
+        "max_tokens": 4096
+      }
+    }
+---
+# Source: argus-agent/templates/ui-configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argus-agent-ui-nginx
+  namespace: argus
+  labels:
+    helm.sh/chart: argus-agent-0.1.0
+    app.kubernetes.io/name: argus-agent
+    app.kubernetes.io/instance: argus-agent
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: Helm
+    app: argus-ui
+    component: frontend
+data:
+  nginx.conf: |
+    events {
+        worker_connections 1024;
+    }
+
+    http {
+        include /etc/nginx/mime.types;
+        default_type application/octet-stream;
+
+        # Logging
+        access_log /var/log/nginx/access.log;
+        error_log /var/log/nginx/error.log;
+
+        # Gzip compression
+        gzip on;
+        gzip_vary on;
+        gzip_proxied any;
+        gzip_comp_level 6;
+        gzip_types text/plain text/css text/xml text/javascript
+                   application/json application/javascript application/xml+rss
+                   application/rss+xml font/truetype font/opentype
+                   application/vnd.ms-fontobject image/svg+xml;
+
+        # Security headers
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-XSS-Protection "1; mode=block" always;
+        add_header Referrer-Policy "no-referrer-when-downgrade" always;
+
+        server {
+            listen 80;
+            server_name _;
+
+            root /usr/share/nginx/html;
+            index index.html;
+
+            # Cache static assets
+            location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+                expires 1y;
+                add_header Cache-Control "public, immutable";
+            }
+
+            # API proxy - Backend FastAPI
+            location /api/ {
+                proxy_pass http://argus-agent-api:8000/api/;
+                proxy_http_version 1.1;
+                proxy_set_header Upgrade $http_upgrade;
+                proxy_set_header Connection 'upgrade';
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+                proxy_cache_bypass $http_upgrade;
+
+                # Timeouts
+                proxy_connect_timeout 120s;
+                proxy_send_timeout 120s;
+                proxy_read_timeout 120s;
+            }
+
+            # Auth proxy
+            location /auth/ {
+                proxy_pass http://argus-agent-api:8000/auth/;
+                proxy_http_version 1.1;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+            }
+
+            # Metrics proxy
+            location /metrics/ {
+                proxy_pass http://argus-agent-api:8000/metrics/;
+                proxy_http_version 1.1;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+                
+                # Timeouts for metrics queries
+                proxy_connect_timeout 60s;
+                proxy_send_timeout 60s;
+                proxy_read_timeout 60s;
+            }            
+
+            # Initial analysis endpoint
+            location /initial-analysis {
+                proxy_pass http://argus-agent-api:8000/initial-analysis;
+                proxy_http_version 1.1;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+
+                # Long timeout for analysis
+                proxy_connect_timeout 180s;
+                proxy_send_timeout 180s;
+                proxy_read_timeout 180s;
+            }
+
+            # Deep dive endpoint
+            location /deep-dive {
+                proxy_pass http://argus-agent-api:8000/deep-dive;
+                proxy_http_version 1.1;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+
+                # Long timeout for deep analysis
+                proxy_connect_timeout 180s;
+                proxy_send_timeout 180s;
+                proxy_read_timeout 180s;
+            }
+
+            # Chat endpoint
+            location /chat {
+                proxy_pass http://argus-agent-api:8000/chat;
+                proxy_http_version 1.1;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+
+                # Long timeout for chat
+                proxy_connect_timeout 180s;
+                proxy_send_timeout 180s;
+                proxy_read_timeout 180s;
+            }
+
+            # Explain log line endpoint
+            location /explain-log-line {
+                proxy_pass http://argus-agent-api:8000/explain-log-line;
+                proxy_http_version 1.1;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+            }
+
+            # Health check endpoints
+            location /health/ {
+                proxy_pass http://argus-agent-api:8000/health/;
+                proxy_http_version 1.1;
+                proxy_set_header Host $host;
+            }
+
+            # Angular SPA - fallback to index.html for client-side routing
+            location / {
+                try_files $uri $uri/ /index.html;
+            }
+        }
+    }
+---
+# Source: argus-agent/templates/pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: argus-agent-chroma-pvc
+  namespace: argus
+  labels:
+    helm.sh/chart: argus-agent-0.1.0
+    app.kubernetes.io/name: argus-agent
+    app.kubernetes.io/instance: argus-agent
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: Helm
+    component: storage
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: longhorn
+---
+# Source: argus-agent/templates/pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: argus-agent-postgres-pvc
+  namespace: argus
+  labels:
+    helm.sh/chart: argus-agent-0.1.0
+    app.kubernetes.io/name: argus-agent
+    app.kubernetes.io/instance: argus-agent
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: Helm
+    component: storage
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: longhorn
+---
+# Source: argus-agent/templates/services.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: argus-agent-mcp-server
+  namespace: argus
+  labels:
+    helm.sh/chart: argus-agent-0.1.0
+    app.kubernetes.io/name: argus-agent
+    app.kubernetes.io/instance: argus-agent
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: Helm
+    app: argus-mcp-server
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8002
+    targetPort: 8002
+    protocol: TCP
+    name: http
+  selector:
+    app.kubernetes.io/name: argus-agent
+    app.kubernetes.io/instance: argus-agent
+    app: argus-mcp-server
+---
+# Source: argus-agent/templates/services.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: argus-agent-api
+  namespace: argus
+  labels:
+    helm.sh/chart: argus-agent-0.1.0
+    app.kubernetes.io/name: argus-agent
+    app.kubernetes.io/instance: argus-agent
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: Helm
+    app: argus-api
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8000
+    targetPort: 8000
+    protocol: TCP
+    name: http
+  selector:
+    app.kubernetes.io/name: argus-agent
+    app.kubernetes.io/instance: argus-agent
+    app: argus-api
+---
+# Source: argus-agent/templates/services.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: argus-agent-ui
+  namespace: argus
+  labels:
+    helm.sh/chart: argus-agent-0.1.0
+    app.kubernetes.io/name: argus-agent
+    app.kubernetes.io/instance: argus-agent
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: Helm
+    app: argus-ui
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+    name: http
+  selector:
+    app.kubernetes.io/name: argus-agent
+    app.kubernetes.io/instance: argus-agent
+    app: argus-ui
+---
+# Source: argus-agent/templates/services.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: argus-agent-postgres
+  namespace: argus
+  labels:
+    helm.sh/chart: argus-agent-0.1.0
+    app.kubernetes.io/name: argus-agent
+    app.kubernetes.io/instance: argus-agent
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: Helm
+    app: argus-postgres
+spec:
+  type: ClusterIP
+  ports:
+  - port: 5432
+    targetPort: 5432
+    protocol: TCP
+    name: postgres
+  selector:
+    app.kubernetes.io/name: argus-agent
+    app.kubernetes.io/instance: argus-agent
+    app: argus-postgres
+---
+# Source: argus-agent/templates/services.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: argus-agent-chromadb
+  namespace: argus
+  labels:
+    helm.sh/chart: argus-agent-0.1.0
+    app.kubernetes.io/name: argus-agent
+    app.kubernetes.io/instance: argus-agent
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: Helm
+    app: argus-chromadb
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8000
+    targetPort: 8000
+    protocol: TCP
+    name: http
+  selector:
+    app.kubernetes.io/name: argus-agent
+    app.kubernetes.io/instance: argus-agent
+    app: argus-chromadb
+---
+# Source: argus-agent/templates/api-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argus-agent-api
+  namespace: argus
+  labels:
+    helm.sh/chart: argus-agent-0.1.0
+    app.kubernetes.io/name: argus-agent
+    app.kubernetes.io/instance: argus-agent
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: Helm
+    app: argus-api
+    component: api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: argus-agent
+      app.kubernetes.io/instance: argus-agent
+      app: argus-api
+  template:
+    metadata:
+      annotations:
+        checksum/config: 1e1da658a89300ff132f3c7f51590ae1d6c8aacc1f5222ec07a9f03550112dfa
+      labels:
+        app.kubernetes.io/name: argus-agent
+        app.kubernetes.io/instance: argus-agent
+        app: argus-api
+        component: api
+    spec:
+      imagePullSecrets:
+        - name: gcr-json-key
+      serviceAccountName: argus-agent
+      securityContext:
+        fsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+      containers:
+      - name: api
+        image: "southamerica-east1-docker.pkg.dev/tcloud-devops/tcloud-devops/argus-api:20251006-153740"
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+        env:
+        - name: PYTHONUNBUFFERED
+          valueFrom:
+            configMapKeyRef:
+              name: argus-agent-config
+              key: PYTHONUNBUFFERED
+        - name: PYTHONDONTWRITEBYTECODE
+          valueFrom:
+            configMapKeyRef:
+              name: argus-agent-config
+              key: PYTHONDONTWRITEBYTECODE
+        - name: MCP_SERVER_URL
+          value: "http://argus-agent-mcp-server:8002/mcp/"
+        envFrom:
+        - secretRef:
+            name: argus-secrets
+        resources:
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+          requests:
+            cpu: 200m
+            memory: 512Mi
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /health/live
+            port: 8000
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /health/ready
+            port: 8000
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          timeoutSeconds: 3
+        volumeMounts:
+        - name: config-volume
+          mountPath: /app/config
+          readOnly: true
+      volumes:
+      - name: config-volume
+        configMap:
+          name: argus-agent-settings
+          items:
+          - key: settings.json
+            path: settings.json
+          - key: models.json
+            path: models.json
+---
+# Source: argus-agent/templates/chromadb-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argus-agent-chromadb
+  namespace: argus
+  labels:
+    helm.sh/chart: argus-agent-0.1.0
+    app.kubernetes.io/name: argus-agent
+    app.kubernetes.io/instance: argus-agent
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: Helm
+    app: argus-chromadb
+    component: database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: argus-agent
+      app.kubernetes.io/instance: argus-agent
+      app: argus-chromadb
+  template:
+    metadata:
+      annotations:
+      labels:
+        app.kubernetes.io/name: argus-agent
+        app.kubernetes.io/instance: argus-agent
+        app: argus-chromadb
+        component: database
+    spec:
+      securityContext:
+        fsGroup: 1000
+      containers:
+      - name: chromadb
+        image: "chromadb/chroma:latest"
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+        env:
+        - name: IS_PERSISTENT
+          value: "TRUE"
+        - name: ANONYMIZED_TELEMETRY
+          value: "FALSE"
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 256Mi
+        livenessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          tcpSocket:
+            port: 8000
+          timeoutSeconds: 5
+        readinessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          tcpSocket:
+            port: 8000
+          timeoutSeconds: 3
+        volumeMounts:
+        - name: chroma-storage
+          mountPath: /data
+      volumes:
+      - name: chroma-storage
+        persistentVolumeClaim:
+          claimName: argus-agent-chroma-pvc
+# Service definido centralmente em templates/services.yaml
+---
+# Source: argus-agent/templates/mcp-server-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argus-agent-mcp-server
+  namespace: argus
+  labels:
+    helm.sh/chart: argus-agent-0.1.0
+    app.kubernetes.io/name: argus-agent
+    app.kubernetes.io/instance: argus-agent
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: Helm
+    app: argus-mcp-server
+    component: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: argus-agent
+      app.kubernetes.io/instance: argus-agent
+      app: argus-mcp-server
+  template:
+    metadata:
+      annotations:
+        checksum/config: 1e1da658a89300ff132f3c7f51590ae1d6c8aacc1f5222ec07a9f03550112dfa
+      labels:
+        app.kubernetes.io/name: argus-agent
+        app.kubernetes.io/instance: argus-agent
+        app: argus-mcp-server
+        component: backend
+    spec:
+      imagePullSecrets:
+        - name: gcr-json-key
+      serviceAccountName: argus-agent
+      securityContext:
+        fsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+      containers:
+      - name: mcp-server
+        image: "southamerica-east1-docker.pkg.dev/tcloud-devops/tcloud-devops/argus-mcp-server:20251006-153740"
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 8002
+          protocol: TCP
+        env:
+        - name: PYTHONUNBUFFERED
+          valueFrom:
+            configMapKeyRef:
+              name: argus-agent-config
+              key: PYTHONUNBUFFERED
+        - name: PYTHONDONTWRITEBYTECODE
+          valueFrom:
+            configMapKeyRef:
+              name: argus-agent-config
+              key: PYTHONDONTWRITEBYTECODE
+        envFrom:
+        - secretRef:
+            name: argus-secrets
+        resources:
+          limits:
+            cpu: 1500m
+            memory: 2Gi
+          requests:
+            cpu: 500m
+            memory: 1Gi
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /health/live
+            port: 8002
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /health/ready
+            port: 8002
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+---
+# Source: argus-agent/templates/postgres-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argus-agent-postgres
+  namespace: argus
+  labels:
+    helm.sh/chart: argus-agent-0.1.0
+    app.kubernetes.io/name: argus-agent
+    app.kubernetes.io/instance: argus-agent
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: Helm
+    app: argus-postgres
+    component: database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: argus-agent
+      app.kubernetes.io/instance: argus-agent
+      app: argus-postgres
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: argus-agent
+        app.kubernetes.io/instance: argus-agent
+        app: argus-postgres
+        component: database
+    spec:
+      securityContext:
+        fsGroup: 999
+      containers:
+      - name: postgres
+        image: "postgres:16-alpine"
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: postgres
+          containerPort: 5432
+          protocol: TCP
+        env:
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: argus-secrets
+              key: POSTGRES_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: argus-secrets
+              key: POSTGRES_PASSWORD
+        - name: POSTGRES_DB
+          valueFrom:
+            secretKeyRef:
+              name: argus-secrets
+              key: POSTGRES_DB
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 256Mi
+        livenessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - argus
+            - -d
+            - argus_auth
+          failureThreshold: 3
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - argus
+            - -d
+            - argus_auth
+          failureThreshold: 3
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+      volumes:
+      - name: postgres-storage
+        persistentVolumeClaim:
+          claimName: argus-agent-postgres-pvc
+---
+# Source: argus-agent/templates/ui-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argus-agent-ui
+  namespace: argus
+  labels:
+    helm.sh/chart: argus-agent-0.1.0
+    app.kubernetes.io/name: argus-agent
+    app.kubernetes.io/instance: argus-agent
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: Helm
+    app: argus-ui
+    component: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: argus-agent
+      app.kubernetes.io/instance: argus-agent
+      app: argus-ui
+  template:
+    metadata:
+      annotations:
+      labels:
+        app.kubernetes.io/name: argus-agent
+        app.kubernetes.io/instance: argus-agent
+        app: argus-ui
+        component: frontend
+    spec:
+      imagePullSecrets:
+        - name: gcr-json-key
+      serviceAccountName: argus-agent
+      securityContext:
+        fsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+      containers:
+      - name: ui
+        image: "southamerica-east1-docker.pkg.dev/tcloud-devops/tcloud-devops/argus-ui:20251006-153740"
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 80
+          protocol: TCP
+        resources:
+          limits:
+            cpu: 200m
+            memory: 256Mi
+          requests:
+            cpu: 50m
+            memory: 128Mi
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+        volumeMounts:
+        - name: nginx-config
+          mountPath: /etc/nginx/nginx.conf
+          subPath: nginx.conf
+          readOnly: true
+        - name: nginx-cache
+          mountPath: /var/cache/nginx
+        - name: nginx-run
+          mountPath: /var/run
+      volumes:
+      - name: nginx-config
+        configMap:
+          name: argus-agent-ui-nginx
+          items:
+          - key: nginx.conf
+            path: nginx.conf
+      - name: nginx-cache
+        emptyDir: {}
+      - name: nginx-run
+        emptyDir: {}
+---
+# Source: argus-agent/templates/ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: argus-agent
+  namespace: argus
+  labels:
+    helm.sh/chart: argus-agent-0.1.0
+    app.kubernetes.io/name: argus-agent
+    app.kubernetes.io/instance: argus-agent
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "900"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "900"
+    nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "900"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  rules:
+  - host: argus.sandbox.tcloud-devops.cloudtotvs.com.br
+    http:
+      paths:
+      # Auth Path (must come before / to avoid being caught by UI)
+      - path: /auth
+        pathType: Prefix
+        backend:
+          service:
+            name: argus-agent-api
+            port:
+              number: 8000
+      # API Path
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: argus-agent-api
+            port:
+              number: 8000
+      # MCP Server Path
+      - path: /mcp
+        pathType: Prefix
+        backend:
+          service:
+            name: argus-agent-mcp-server
+            port:
+              number: 8002
+      # UI Path (must be last to match / as catch-all)
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: argus-agent-ui
+            port:
+              number: 80

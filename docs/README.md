@@ -17,6 +17,10 @@ O Argus Agent é uma plataforma completa de análise de logs composta por:
 - [Guia de Início Rápido](INICIO-RAPIDO.md) - Como começar em minutos
 - **[Variáveis de Ambiente](ENV-VARIABLES.md)** - Guia completo de configuração do .env
 
+### 🎯 Planejamento & Evolução
+- **[Melhorias Sugeridas](MELHORIAS-SUGERIDAS.md)** - Roadmap de evolução e próximos passos
+- **[Arquitetura Futura](ARQUITETURA-FUTURA.md)** - Diagramas e visão de arquitetura proposta
+
 ### 🏗️ Componentes
 - [API Documentation](../api/README.md) - FastAPI + LangGraph (porta 8000)
 - [MCP Server Documentation](../mcp-server/README.md) - FastMCP Server (porta 8002)
@@ -111,6 +115,8 @@ argus-mcp-agent/
 │   ├── README.md                      # Este arquivo (índice)
 │   ├── INICIO-RAPIDO.md              # Guia de início rápido
 │   ├── ENV-VARIABLES.md              # Variáveis de ambiente
+│   ├── MELHORIAS-SUGERIDAS.md        # Roadmap de evolução e melhorias
+│   ├── ARQUITETURA-FUTURA.md         # Diagramas Mermaid da arquitetura
 │   ├── DEPLOYMENT.md                  # Guia de deploy
 │   ├── DEPLOY-SANDBOX.md             # Deploy sandbox
 │   ├── BUILD-LOCAL.md                # Build local (GCP)

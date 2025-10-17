@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: litellm-config
+  namespace: argus
+data:
+  config.yaml: |
+    model_list:
+      - model_name: gpt-4
+        litellm_params:
+          model: gpt-4
+          api_key: os.environ/OPENAI_API_KEY
+      - model_name: gpt-3.5-turbo
+        litellm_params:
+          model: gpt-3.5-turbo
+          api_key: os.environ/OPENAI_API_KEY
+      - model_name: qwen-2.5-1.5b
+        litellm_params:
+          model: openai/qwen2.5-1.5b-instruct
+          api_base: http://llama-cpp-service.argus.svc.cluster.local:8080/v1
+      - model_name: deepseek-r1-1.5b
+        litellm_params:
+          model: openai/deepseek-r1-distill-qwen-1.5b
+          api_base: http://llama-cpp-deepseek-service.argus.svc.cluster.local:8080/v1
+      - model_name: llama-guard-3-1b
+        litellm_params:
+          model: openai/llama-guard-3-1b
+          api_base: http://llama-cpp-llamaguard-service.argus.svc.cluster.local:8080/v1
+
+    litellm_settings:
+      drop_params: true
+      set_verbose: true
+      success_callback: []
+      failure_callback: []
+
+    general_settings:
+      master_key: os.environ/LITELLM_MASTER_KEY
+      database_url: null
+
+    router_settings:
+      enable_pre_call_checks: true
+
+    environment_variables:
+      LITELLM_DISABLE_AUTH: "False"

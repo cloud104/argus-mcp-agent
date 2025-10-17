@@ -1,0 +1,45 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: llama-cpp-service
+  namespace: argus
+spec:
+  selector:
+    app: llama-cpp
+  ports:
+  - protocol: TCP
+    port: 8080
+    targetPort: 8080
+    name: http
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: llama-cpp-deepseek-service
+  namespace: argus
+spec:
+  selector:
+    app: llama-cpp-deepseek
+  ports:
+  - protocol: TCP
+    port: 8080
+    targetPort: 8080
+    name: http
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: llama-cpp-llamaguard-service
+  namespace: argus
+spec:
+  selector:
+    app: llama-cpp-llamaguard
+  ports:
+  - protocol: TCP
+    port: 8080
+    targetPort: 8080
+    name: http
+  type: ClusterIP
