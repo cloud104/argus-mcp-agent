@@ -11,7 +11,7 @@ pydantic==2.11.9
 pydantic-core==2.33.2
 
 # FastMCP (Model Context Protocol)
-fastmcp==2.12.3
+fastmcp==2.14.0
 
 # Elasticsearch Client
 elasticsearch==8.14.0
